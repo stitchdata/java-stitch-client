@@ -1,0 +1,21 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <name>Stitch SDK</name>
+
+  <groupId>com.stitchdata</groupId>
+  <artifactId>client</artifactId>
+  <version>0.1-SNAPSHOT</version>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.cognitect</groupId>
+      <artifactId>transit-java</artifactId>
+      <version>0.8.311</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.httpcomponents</groupId>
+      <artifactId>httpclient</artifactId>
+      <version>4.5.2</version>
+    </dependency>
+  </dependencies>
+</project>
