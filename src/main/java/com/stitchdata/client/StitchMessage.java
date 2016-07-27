@@ -97,7 +97,7 @@ public class StitchMessage {
     }
 
     public StitchMessage withData(Map data) {
-        this.data = (Map)copyData(data);
+        this.data = data;
         return this;
     }
 
@@ -129,49 +129,8 @@ public class StitchMessage {
         return map;
     }
 
-    private Object copyData(Object data) {
-
-        if (data == null) {
-            return data;
-        }
-
-        if (data instanceof Map) {
-            HashMap result = new HashMap();
-            for (Map.Entry e : (Set<Map.Entry>)((Map)data).entrySet()) {
-                if (! (e.getKey() instanceof String) ) {
-                    throw new IllegalArgumentException(
-                        "Map keys must be string, got " + k +
-                        " which is of type " + k.getClass());
-                }
-                result.put(e.getKey(), copyData(e.getValue()));
-            }
-            return result;
-        }
-
-        if (data instanceof List) {
-            ArrayList result = new ArrayList();
-            for (Object item : (List)data) {
-                result.add(copyData(item));
-            }
-            return result;
-        }
-
-        else if (data instanceof String ||
-                 data instanceof Boolean ||
-                 data instanceof Number ||
-                 data instanceof Date) {
-            return data;
-        }
-
-        throw new IllegalArgumentException(
-            "Don't know how to convert value '" + data + "', " +
-            "which is of type " + data.getClass() + ", " +
-            "to a Stitch datatype.");
-
-    }
-
     public StitchMessage clone() {
-        return new StitchMessage(action, clientId, token, namespace, tableName, tableVersion, keyNames, sequence, data);
+        return new StitchMessage(action, clientId, token, namespace, tableName, tableVersion, keyNames);
     }
 
 }
