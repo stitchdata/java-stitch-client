@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.util.ArrayList;
+
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -13,18 +14,19 @@ import com.cognitect.transit.Writer;
 import com.cognitect.transit.Reader;
 import com.cognitect.transit.TransitFactory;
 
+
 public class AsyncStitchClient implements Closeable {
 
     private static final int CAPACITY = 10000;
     private final BlockingQueue<QueueItem> queue = new ArrayBlockingQueue<QueueItem>(CAPACITY);
-    private final String stitchUrl;
     private final int maxBytes;
     private final int maxFlushIntervalMillis;
     private long lastFlushTime;
     private final CountDownLatch closeLatch = new CountDownLatch(1);
+    private StitchClient client;
 
     public AsyncStitchClient(String stitchUrl, int maxBytes, int maxFlushIntervalMillis) {
-        this.stitchUrl = stitchUrl;
+        this.client = new StitchClient(stitchUrl);
         this.maxBytes = maxBytes;
         this.maxFlushIntervalMillis = maxFlushIntervalMillis;
         Thread workerThread = new Thread(new Worker());
@@ -86,9 +88,8 @@ public class AsyncStitchClient implements Closeable {
                 Reader reader = TransitFactory.reader(TransitFactory.Format.MSGPACK, bais);
                 messages.add(reader.read());
             }
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Writer writer = TransitFactory.writer(TransitFactory.Format.MSGPACK, baos);
-            writer.write(messages);
+
+            client.pushMaps(messages);
 
             items.clear();
             numBytes = 0;
