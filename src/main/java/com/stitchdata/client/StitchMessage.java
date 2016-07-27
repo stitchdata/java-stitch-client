@@ -32,7 +32,7 @@ public class StitchMessage {
 
     }
 
-    private StitchMessage(Action action, Long clientId, String token, String namespace, String tableName, Long tableVersion, List<String> keyNames, Long sequence, Map data) {
+    private StitchMessage(Action action, Long clientId, String token, String namespace, String tableName, Long tableVersion, List<String> keyNames) {
         this.action = action;
         this.clientId = clientId;
         this.token = token;
@@ -40,8 +40,6 @@ public class StitchMessage {
         this.tableName = tableName;
         this.tableVersion = tableVersion;
         this.keyNames = keyNames;
-        this.sequence = sequence;
-        this.data = data;
     }
 
     public StitchMessage withAction(Action action) {
