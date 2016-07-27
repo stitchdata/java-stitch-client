@@ -25,8 +25,16 @@ public class AsyncStitchClient implements Closeable {
     private final CountDownLatch closeLatch = new CountDownLatch(1);
     private StitchClient client;
 
-    public AsyncStitchClient(String stitchUrl, int maxBytes, int maxFlushIntervalMillis) {
-        this.client = new StitchClient(stitchUrl);
+    public AsyncStitchClient(int clientId, String token, int maxBytes, int maxFlushIntervalMillis) {
+        this(new StitchClient(clientId, token), maxBytes, maxFlushIntervalMillis);
+    }
+
+    public AsyncStitchClient(String stitchUrl, int clientId, String token, int maxBytes, int maxFlushIntervalMillis) {
+        this(new StitchClient(stitchUrl, clientId, token), maxBytes, maxFlushIntervalMillis);
+    }
+
+    private AsyncStitchClient(StitchClient client, int maxBytes, int maxFlushIntervalMillis) {
+        this.client = client;
         this.maxBytes = maxBytes;
         this.maxFlushIntervalMillis = maxFlushIntervalMillis;
         Thread workerThread = new Thread(new Worker());

@@ -14,7 +14,7 @@ import java.util.Set;
 
 public class StitchMessage {
 
-    private enum Action { UPSERT, SWITCH_VIEW };
+    public enum Action { UPSERT, SWITCH_VIEW };
 
     private Action action;
 
@@ -32,10 +32,8 @@ public class StitchMessage {
 
     }
 
-    private StitchMessage(Action action, Long clientId, String token, String namespace, String tableName, Long tableVersion, List<String> keyNames) {
+    private StitchMessage(Action action, String namespace, String tableName, Long tableVersion, List<String> keyNames) {
         this.action = action;
-        this.clientId = clientId;
-        this.token = token;
         this.namespace = namespace;
         this.tableName = tableName;
         this.tableVersion = tableVersion;
@@ -53,16 +51,6 @@ public class StitchMessage {
 
     private StitchMessage withActionSwitchView() {
         return withAction(Action.SWITCH_VIEW);
-    }
-
-    public StitchMessage withClientId(long clientId) {
-        this.clientId = clientId;
-        return this;
-    }
-
-    public StitchMessage withToken(String token) {
-        this.token = token;
-        return this;
     }
 
     public StitchMessage withNamespace(String namespace) {
@@ -109,26 +97,25 @@ public class StitchMessage {
     public Map toMap() {
         HashMap map = new HashMap();
 
-        setRequiredField(map, "action", action);
-        setRequiredField(map, "client_id", clientId);
-        setRequiredField(map, "token", token);
         setRequiredField(map, "namespace", namespace);
         setRequiredField(map, "table_name", tableName);
         map.put("table_version", tableVersion);
 
         switch (action) {
         case UPSERT:
+            map.put("action", "upsert");
             setRequiredField(map, "sequence", sequence);
             setRequiredField(map, "data", data);
             break;
         case SWITCH_VIEW:
+            map.put("action", "switch_view");
             break;
         }
         return map;
     }
 
     public StitchMessage clone() {
-        return new StitchMessage(action, clientId, token, namespace, tableName, tableVersion, keyNames);
+        return new StitchMessage(action, namespace, tableName, tableVersion, keyNames);
     }
 
 }
