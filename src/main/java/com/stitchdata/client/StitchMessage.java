@@ -11,16 +11,16 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-
 public class StitchMessage {
 
     public enum Action { UPSERT, SWITCH_VIEW };
 
     private Action action;
 
-    private Long clientId;
-    private String token;
-    private String namespace;
+    private final int clientId;
+    private final String token;
+    private final String namespace;
+
     private String tableName;
     private Long tableVersion;
     private List<String> keyNames;
@@ -28,16 +28,10 @@ public class StitchMessage {
     private Long sequence;
     private Map data;
 
-    public StitchMessage() {
-
-    }
-
-    private StitchMessage(Action action, String namespace, String tableName, Long tableVersion, List<String> keyNames) {
-        this.action = action;
+    public StitchMessage(int clientId, String token, String namespace) {
+        this.clientId = clientId;
+        this.token = token;
         this.namespace = namespace;
-        this.tableName = tableName;
-        this.tableVersion = tableVersion;
-        this.keyNames = keyNames;
     }
 
     public StitchMessage withAction(Action action) {
@@ -51,11 +45,6 @@ public class StitchMessage {
 
     private StitchMessage withActionSwitchView() {
         return withAction(Action.SWITCH_VIEW);
-    }
-
-    public StitchMessage withNamespace(String namespace) {
-        this.namespace = namespace;
-        return this;
     }
 
     public StitchMessage withTableName(String tableName) {
@@ -94,18 +83,24 @@ public class StitchMessage {
         map.put(field, value);
     }
 
-    public Map toMap() {
+    public Map build() {
         HashMap map = new HashMap();
 
+        setRequiredField(map, "client_id", clientId);
         setRequiredField(map, "namespace", namespace);
         setRequiredField(map, "table_name", tableName);
         map.put("table_version", tableVersion);
+
+        if (action == null) {
+            throw new RuntimeException("action must not be null");
+        }
 
         switch (action) {
         case UPSERT:
             map.put("action", "upsert");
             setRequiredField(map, "sequence", sequence);
             setRequiredField(map, "data", data);
+            setRequiredField(map, "key_names", keyNames);
             break;
         case SWITCH_VIEW:
             map.put("action", "switch_view");
@@ -113,9 +108,4 @@ public class StitchMessage {
         }
         return map;
     }
-
-    public StitchMessage clone() {
-        return new StitchMessage(action, namespace, tableName, tableVersion, keyNames);
-    }
-
 }
