@@ -14,6 +14,8 @@ import java.util.Set;
 
 public class StitchMessage {
 
+    private enum Action { UPSERT, SWITCH_VIEW };
+
     private Action action;
 
     private Long clientId;
@@ -25,8 +27,6 @@ public class StitchMessage {
 
     private Long sequence;
     private Map data;
-
-    private enum Action { UPSERT, SWITCH_VIEW };
 
     public StitchMessage() {
 
@@ -45,9 +45,6 @@ public class StitchMessage {
     }
 
     public StitchMessage withAction(Action action) {
-        if (action == null) {
-            throw new IllegalArgumentException("Action must not be null");
-        }
         this.action = action;
         return this;
     }
@@ -142,7 +139,9 @@ public class StitchMessage {
             HashMap result = new HashMap();
             for (Map.Entry e : (Set<Map.Entry>)((Map)data).entrySet()) {
                 if (! (e.getKey() instanceof String) ) {
-                    throw new IllegalArgumentException("Map keys must be strings");
+                    throw new IllegalArgumentException(
+                        "Map keys must be string, got " + k +
+                        " which is of type " + k.getClass());
                 }
                 result.put(e.getKey(), copyData(e.getValue()));
             }
@@ -159,19 +158,15 @@ public class StitchMessage {
 
         else if (data instanceof String ||
                  data instanceof Boolean ||
-                 data instanceof Byte ||
-                 data instanceof Short ||
-                 data instanceof Integer ||
-                 data instanceof Long ||
-                 data instanceof Float ||
-                 data instanceof Double ||
-                 data instanceof BigDecimal ||
-                 data instanceof BigInteger ||
+                 data instanceof Number ||
                  data instanceof Date) {
             return data;
         }
 
-        throw new IllegalArgumentException("Unknown datatype");
+        throw new IllegalArgumentException(
+            "Don't know how to convert value '" + data + "', " +
+            "which is of type " + data.getClass() + ", " +
+            "to a Stitch datatype.");
 
     }
 
