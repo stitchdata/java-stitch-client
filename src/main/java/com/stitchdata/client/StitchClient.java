@@ -60,19 +60,12 @@ public class StitchClient {
         }
 
         public StitchClient build() {
-            return new StitchClient(clientId, token, namespace);
+            return new StitchClient(STITCH_URL, clientId, token, namespace);
         }
     }
 
     public static Builder builder() {
         return new Builder();
-    }
-
-    StitchClient(int clientId, String token, String namespace) {
-        this.clientId = clientId;
-        this.token = token;
-        this.namespace = namespace;
-        this.stitchUrl = STITCH_URL;
     }
 
     public StitchClient(String stitchUrl, int clientId, String token, String namespace) {
@@ -92,12 +85,8 @@ public class StitchClient {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
         writer.write(messages);
-        String body = null;
-        try {
-            body = baos.toString("UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            throw new RuntimeException(e);
-        }
+        String body = baos.toString("UTF-8");
+
         try {
             Request request = Request.Post(stitchUrl)
                 .connectTimeout(connectTimeout)
@@ -122,7 +111,6 @@ public class StitchClient {
         } catch (ClientProtocolException e) {
             throw new RuntimeException(e);
         }
-
     }
 
     public StitchResponse push(Map message) throws StitchException, IOException {
@@ -136,9 +124,9 @@ public class StitchClient {
         message.put(Stitch.Field.CLIENT_ID, clientId);
         message.put(Stitch.Field.NAMESPACE, namespace);
         message.put(Stitch.Field.ACTION, Stitch.Action.UPSERT);
-        message.put(Stitch.Field.TABLE_NAME, "people");
-        message.put(Stitch.Field.KEY_NAMES, Arrays.asList(new String[] { "id" }));
-        message.put(Stitch.Field.SEQUENCE, System.currentTimeMillis());
+        message.put(Stitch.Field.TABLE_NAME, tableName);
+        message.put(Stitch.Field.KEY_NAMES, keyNames);
+        message.put(Stitch.Field.SEQUENCE, sequence);
         message.put(Stitch.Field.DATA, data);
         return message;
     }

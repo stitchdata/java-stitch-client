@@ -22,7 +22,7 @@ public class SimpleExample {
 
     public static void main(String ...args) {
         if (args.length != 3) {
-            System.err.println("Usage: ...");
+            System.err.println("Usage: CLIENT_ID TOKEN NAMESPACE");
             System.exit(-1);
         }
 
@@ -47,9 +47,11 @@ public class SimpleExample {
         String tableName = "people";
         List<String> keyNames = Arrays.asList(new String[] { "id" });
         long sequence = System.currentTimeMillis();
+
         ArrayList<Map> messages = new ArrayList<Map>();
         for (Map person : people) {
-            messages.add(client.newUpsertMessage(tableName, keyNames, sequence, person));
+            Map message = client.newUpsertMessage(tableName, keyNames, sequence, person);
+            messages.add(message);
         }
         try {
             StitchResponse response = client.push(messages);

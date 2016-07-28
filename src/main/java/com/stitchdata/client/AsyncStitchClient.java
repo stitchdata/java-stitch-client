@@ -20,11 +20,6 @@ public class AsyncStitchClient implements Closeable {
 
     private static final int CAPACITY = 10000;
 
-    private static final ResponseHandler DEFAULT_RESPONSE_HANDLER = new ResponseHandler() {
-            public void handleOk(List<Map> messages, StitchResponse response) { }
-            public void handleError(List<Map> messages, Exception e) { }
-        };
-
     private final StitchClient client;
     private final int maxFlushIntervalMillis;
     private final int maxBytes;
@@ -41,10 +36,10 @@ public class AsyncStitchClient implements Closeable {
     public static class Builder {
 
         private StitchClient.Builder clientBuilder = StitchClient.builder();
-        private int maxFlushIntervalMillis = 10000;
-        private int maxBytes = 10000000;
-        private int maxRecords = 10000;
-        private ResponseHandler responseHandler = DEFAULT_RESPONSE_HANDLER;
+        private int maxFlushIntervalMillis = Stitch.DEFAULT_MAX_FLUSH_INTERVAL_MILLIS;
+        private int maxBytes = Stitch.DEFAULT_MAX_FLUSH_BYTES;
+        private int maxRecords = Stitch.DEFAULT_MAX_FLUSH_RECORDS;
+        private ResponseHandler responseHandler = null;
 
         public Builder withClientId(int clientId) {
             this.clientBuilder.withClientId(clientId);
@@ -107,11 +102,11 @@ public class AsyncStitchClient implements Closeable {
     }
 
     public boolean offer(Map m) {
-        return offer(m);
+        return queue.offer(wrap(m));
     }
 
     public boolean offer(Map m, long timeout, TimeUnit unit) throws InterruptedException {
-        return offer(m, timeout, unit);
+        return queue.offer(wrap(m), timeout, unit);
     }
 
     public void put(Map m) throws InterruptedException {
@@ -129,7 +124,8 @@ public class AsyncStitchClient implements Closeable {
 
     private MessageWrapper wrap(Map message) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Writer writer = TransitFactory.writer(TransitFactory.Format.MSGPACK, baos);
+        Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
+        // using bytes to avoid storing a mutable map
         writer.write(message);
         return new MessageWrapper(baos.toByteArray(), false);
     }
@@ -156,15 +152,19 @@ public class AsyncStitchClient implements Closeable {
             ArrayList messages = new ArrayList(items.size());
             for (MessageWrapper item : items) {
                 ByteArrayInputStream bais = new ByteArrayInputStream(item.bytes);
-                Reader reader = TransitFactory.reader(TransitFactory.Format.MSGPACK, bais);
+                Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
                 messages.add(reader.read());
             }
 
             try {
                 StitchResponse response = client.push(messages);
-                responseHandler.handleOk(messages, response);
+                if (responseHandler != null) {
+                    responseHandler.handleOk(messages, response);
+                }
             } catch (Exception e) {
-                responseHandler.handleError(messages, e);
+                if (responseHandler != null) {
+                    responseHandler.handleError(messages, e);
+                }
             }
 
             items.clear();
