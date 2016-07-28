@@ -103,11 +103,11 @@ public class StitchClient {
                 statusLine.getStatusCode(),
                 statusLine.getReasonPhrase(),
                 rdr.readObject());
-            if (statusLine.getStatusCode() >= 300) {
-                throw new StitchException(stitchResponse);
+            if (stitchResponse.isOk()) {
+                return stitchResponse;
             }
             else {
-                return stitchResponse;
+                throw new StitchException(stitchResponse);
             }
         } catch (ClientProtocolException e) {
             throw new RuntimeException(e);
@@ -115,10 +115,10 @@ public class StitchClient {
 
     }
 
-    public void push(Map message) throws StitchException, IOException {
+    public StitchResponse push(Map message) throws StitchException, IOException {
         ArrayList<Map> messages = new ArrayList<Map>();
         messages.add(message);
-        push(messages);
+        return push(messages);
     }
 
 }

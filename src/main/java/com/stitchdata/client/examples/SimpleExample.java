@@ -4,8 +4,10 @@ import java.io.IOException;
 import com.stitchdata.client.StitchClient;
 import com.stitchdata.client.StitchMessage;
 import com.stitchdata.client.StitchException;
+import com.stitchdata.client.StitchResponse;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.ArrayList;
 
 public class SimpleExample {
 
@@ -38,26 +40,27 @@ public class SimpleExample {
             makePerson(3, "Aretha Franklin")
         };
 
+        ArrayList<Map> messages = new ArrayList<Map>();
         for (Map person : people) {
-            try {
-                client.push(client.createMessage()
-                            .withAction(StitchMessage.Action.UPSERT)
-                            .withTableName("people")
-                            .withKeyNames("id")
-                            .withSequence(System.currentTimeMillis())
-                            .withData(person)
-                            .build());
-            }
-            catch (StitchException e) {
-                System.err.println(e.getMessage());
-                System.exit(-1);
-            }
-            catch (IOException e) {
-                System.err.println(e.getMessage());
-                System.exit(-1);
-            }
-
+            messages.add(client.createMessage()
+                                .withAction(StitchMessage.Action.UPSERT)
+                                .withTableName("people")
+                                .withKeyNames("id")
+                                .withSequence(System.currentTimeMillis())
+                                .withData(person)
+                                .build());
+        }
+        try {
+            StitchResponse response = client.push(messages);
+            System.out.println(response);
+        }
+        catch (StitchException e) {
+            System.out.println("Got error response from Stitch: " + e.getMessage() + ((StitchException)e).getResponse().getContent());
+            System.exit(-1);
+        }
+        catch (IOException e) {
+            System.err.println(e.getMessage());
+            System.exit(-1);
         }
     }
-
 }
