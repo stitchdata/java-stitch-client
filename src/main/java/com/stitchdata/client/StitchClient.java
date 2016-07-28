@@ -7,8 +7,10 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import com.cognitect.transit.Writer;
 import com.cognitect.transit.TransitFactory;
 import org.apache.http.client.fluent.Request;
@@ -22,6 +24,9 @@ import org.apache.http.HttpEntity;
 import javax.json.Json;
 import javax.json.JsonReader;
 
+/**
+ * Simple client for Stitch.
+ */
 public class StitchClient {
 
     public static final String STITCH_URL =  "https://pipeline-gateway.rjmetrics.com/push";
@@ -77,10 +82,12 @@ public class StitchClient {
         this.namespace = namespace;
     }
 
-    public StitchMessage createMessage() {
-        return new StitchMessage(clientId, token, namespace);
-    }
-
+    /**
+     * Push a list of messages, blocking until Stitch accepts them.
+     *
+     * @param messages List of messages to send. Use
+     *                 client.createMessage() to create messages.
+     */
     public StitchResponse push(List<Map> messages) throws StitchException, IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
@@ -122,6 +129,22 @@ public class StitchClient {
         ArrayList<Map> messages = new ArrayList<Map>();
         messages.add(message);
         return push(messages);
+    }
+
+    public Map newUpsertMessage(String tableName, List<String> keyNames, long sequence, Map data) {
+        Map<String,Object> message = new HashMap<String,Object>();
+        message.put(Stitch.Field.CLIENT_ID, clientId);
+        message.put(Stitch.Field.NAMESPACE, namespace);
+        message.put(Stitch.Field.ACTION, Stitch.Action.UPSERT);
+        message.put(Stitch.Field.TABLE_NAME, "people");
+        message.put(Stitch.Field.KEY_NAMES, Arrays.asList(new String[] { "id" }));
+        message.put(Stitch.Field.SEQUENCE, System.currentTimeMillis());
+        message.put(Stitch.Field.DATA, data);
+        return message;
+    }
+
+    public void validate(Map message) {
+        // TODO: Validate
     }
 
 }

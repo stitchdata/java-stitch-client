@@ -198,7 +198,8 @@ public class AsyncStitchClient implements Closeable {
         }
     }
 
-    public StitchMessage createMessage() {
-        return client.createMessage();
+    public Map newUpsertMessage(String tableName, List<String> keyNames, long sequence, Map data) {
+        return client.newUpsertMessage(tableName, keyNames, sequence, data);
     }
+
 }

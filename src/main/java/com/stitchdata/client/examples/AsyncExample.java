@@ -2,11 +2,12 @@ package com.stitchdata.client.examples;
 
 import java.io.IOException;
 import com.stitchdata.client.AsyncStitchClient;
-import com.stitchdata.client.StitchMessage;
 import com.stitchdata.client.StitchException;
 import com.stitchdata.client.StitchResponse;
 import com.stitchdata.client.ResponseHandler;
 import java.util.List;
+import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -32,10 +33,15 @@ public class AsyncExample {
         Map[] people = new Map[] {
             makePerson(1, "Jerry Garcia"),
             makePerson(2, "Omar Rodgriguez Lopez"),
-            makePerson(3, "Nina Simone")
-            makePerson(4, "Joni Mitchell")
+            makePerson(3, "Nina Simone"),
+            makePerson(4, "Joni Mitchell"),
             makePerson(5, "David Bowie")
         };
+
+        String tableName = "people";
+        List<String> keyNames = Arrays.asList(new String[] { "id" });
+        long sequence = System.currentTimeMillis();
+        ArrayList<Map> messages = new ArrayList<Map>();
 
         ResponseHandler responseHandler = new ResponseHandler() {
 
@@ -53,7 +59,6 @@ public class AsyncExample {
                 }
             };
 
-
         AsyncStitchClient client = AsyncStitchClient.builder()
             .withClientId(clientId)
             .withToken(token)
@@ -64,13 +69,7 @@ public class AsyncExample {
         try {
             for (Map person : people) {
                 try {
-                    client.put(client.createMessage()
-                               .withAction(StitchMessage.Action.UPSERT)
-                               .withTableName("people")
-                               .withKeyNames("id")
-                               .withSequence(System.currentTimeMillis())
-                               .withData(person)
-                               .build());
+                    client.put(client.newUpsertMessage(tableName, keyNames, sequence, person));
                 }
                 catch (InterruptedException e) {
                     System.err.println("Interrupted while putting record");
