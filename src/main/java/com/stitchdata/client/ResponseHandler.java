@@ -6,6 +6,6 @@ import java.util.Map;
 public interface ResponseHandler  {
 
     public void handleOk(List<Map> messages, StitchResponse response);
-    public void handleException(List<Map> messages, Exception exception);
+    public void handleError(List<Map> messages, Exception exception);
 
 }

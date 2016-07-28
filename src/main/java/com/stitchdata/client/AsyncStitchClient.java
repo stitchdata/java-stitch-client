@@ -22,7 +22,7 @@ public class AsyncStitchClient implements Closeable {
 
     private static final ResponseHandler DEFAULT_RESPONSE_HANDLER = new ResponseHandler() {
             public void handleOk(List<Map> messages, StitchResponse response) { }
-            public void handleException(List<Map> messages, Exception e) { }
+            public void handleError(List<Map> messages, Exception e) { }
         };
 
 
@@ -37,7 +37,7 @@ public class AsyncStitchClient implements Closeable {
 
     private long lastFlushTime;
 
-    public class Builder {
+    public static class Builder {
 
         private StitchClient.Builder clientBuilder;
         private int maxFlushIntervalMillis;
@@ -90,6 +90,9 @@ public class AsyncStitchClient implements Closeable {
         }
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
 
     AsyncStitchClient(StitchClient client, int maxFlushIntervalMillis, int maxBytes, int maxRecords, ResponseHandler responseHandler) {
         this.client = client;
@@ -148,7 +151,6 @@ public class AsyncStitchClient implements Closeable {
                 numBytes >= maxBytes ||
                 items.size() >= maxRecords ||
                 (System.currentTimeMillis() - lastFlushTime ) >= maxFlushIntervalMillis;
-
         }
 
         private void flush() {
@@ -163,7 +165,7 @@ public class AsyncStitchClient implements Closeable {
                 StitchResponse response = client.push(messages);
                 responseHandler.handleOk(messages, response);
             } catch (Exception e) {
-                responseHandler.handleException(messages, e);
+                responseHandler.handleError(messages, e);
             }
 
             items.clear();
@@ -195,4 +197,7 @@ public class AsyncStitchClient implements Closeable {
         }
     }
 
+    public StitchMessage createMessage() {
+        return client.createMessage();
+    }
 }

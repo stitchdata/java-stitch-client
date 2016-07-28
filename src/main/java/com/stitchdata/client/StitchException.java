@@ -8,6 +8,10 @@ public class StitchException extends Exception {
         this.response = response;
     }
 
+    public StitchResponse getResponse() {
+        return response;
+    }
+
     public String getMessage() {
         return response.toString();
     }
