@@ -18,19 +18,33 @@ import com.cognitect.transit.TransitFactory;
 public class AsyncStitchClient implements Closeable {
 
     private static final int CAPACITY = 10000;
-    private final BlockingQueue<QueueItem> queue = new ArrayBlockingQueue<QueueItem>(CAPACITY);
-    private final int maxBytes;
-    private final int maxFlushIntervalMillis;
+
+    private final BlockingQueue<MessageWrapper> queue = new ArrayBlockingQueue<MessageWrapper>(CAPACITY);
+
+    private int maxBytes;
+    private int maxFlushIntervalMillis;
     private long lastFlushTime;
     private final CountDownLatch closeLatch = new CountDownLatch(1);
     private StitchClient client;
 
-    public AsyncStitchClient(int clientId, String token, int maxBytes, int maxFlushIntervalMillis) {
-        this(new StitchClient(clientId, token), maxBytes, maxFlushIntervalMillis);
+    public AsyncStitchClient(int clientId, String token, String namespace, int maxFlushIntervalMillis, int maxBytes) {
+        this(new StitchClient(clientId, token, namespace), maxBytes, maxFlushIntervalMillis);
     }
 
-    public AsyncStitchClient(String stitchUrl, int clientId, String token, int maxBytes, int maxFlushIntervalMillis) {
-        this(new StitchClient(stitchUrl, clientId, token), maxBytes, maxFlushIntervalMillis);
+    public AsyncStitchClient(String stitchUrl, int clientId, String token, String namespace, int maxFlushIntervalMillis, int maxBytes, int maxRecords) {
+        this(new StitchClient(stitchUrl, clientId, token, namespace), maxBytes, maxFlushIntervalMillis);
+    }
+
+    public boolean offer(Map m) {
+        return queue.offer(wrap(m));
+    }
+
+    public boolean offer(Map m, long timeout, TimeUnit unit) throws InterruptedException {
+        return queue.offer(wrap(m), timeout, unit);
+    }
+
+    public void put(Map m) throws InterruptedException {
+        queue.put(wrap(m));
     }
 
     private AsyncStitchClient(StitchClient client, int maxBytes, int maxFlushIntervalMillis) {
@@ -41,25 +55,25 @@ public class AsyncStitchClient implements Closeable {
         workerThread.start();
     }
 
-    private class QueueItem {
+    private class MessageWrapper {
         byte[] bytes;
         boolean isEndOfStream;
-        QueueItem(byte[] bytes, boolean isEndOfStream) {
+        MessageWrapper(byte[] bytes, boolean isEndOfStream) {
             this.bytes = bytes;
             this.isEndOfStream = isEndOfStream;
         }
     }
 
-    private QueueItem toQueueItem(StitchMessage message) {
+    private MessageWrapper wrap(Map message) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Writer writer = TransitFactory.writer(TransitFactory.Format.MSGPACK, baos);
-        writer.write(message.toMap());
-        return new QueueItem(baos.toByteArray(), false);
+        writer.write(message);
+        return new MessageWrapper(baos.toByteArray(), false);
     }
 
     public void close() {
         try {
-            queue.put(new QueueItem(null, true));
+            queue.put(new MessageWrapper(null, true));
             closeLatch.await();
         } catch (InterruptedException e) {
             return;
@@ -67,20 +81,8 @@ public class AsyncStitchClient implements Closeable {
     }
 
     private class Worker implements Runnable {
-        private ArrayList<QueueItem> items;
+        private ArrayList<hMessageWrapper> items;
         private int numBytes;
-
-        public boolean offer(StitchMessage m) {
-            return queue.offer(toQueueItem(m));
-        }
-
-        public boolean offer(StitchMessage m, long timeout, TimeUnit unit) throws InterruptedException {
-            return queue.offer(toQueueItem(m), timeout, unit);
-        }
-
-        public void put(StitchMessage m) throws InterruptedException {
-            queue.put(toQueueItem(m));
-        }
 
         public boolean shouldFlush() {
             return
@@ -91,13 +93,17 @@ public class AsyncStitchClient implements Closeable {
 
         private void flush() {
             ArrayList messages = new ArrayList(items.size());
-            for (QueueItem item : items) {
+            for (MessageWrapper item : items) {
                 ByteArrayInputStream bais = new ByteArrayInputStream(item.bytes);
                 Reader reader = TransitFactory.reader(TransitFactory.Format.MSGPACK, bais);
                 messages.add(reader.read());
             }
 
-            client.pushMaps(messages);
+            try {
+                client.push(messages);
+            } catch (StitchException e) {
+
+            }
 
             items.clear();
             numBytes = 0;
@@ -107,7 +113,7 @@ public class AsyncStitchClient implements Closeable {
         public void run() {
             boolean running = true;
             while (running) {
-                QueueItem item;
+                MessageWrapper item;
                 try {
                     item = queue.take();
                 } catch (InterruptedException e) {
