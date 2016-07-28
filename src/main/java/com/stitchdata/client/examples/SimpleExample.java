@@ -35,9 +35,7 @@ public class SimpleExample {
             .build();
 
         Map[] people = new Map[] {
-            makePerson(1, "Ben Franklin"),
-            makePerson(2, "Betsy Ross"),
-            makePerson(3, "Aretha Franklin")
+
         };
 
         ArrayList<Map> messages = new ArrayList<Map>();

@@ -15,16 +15,14 @@ public class StitchMessage {
 
     public enum Action { UPSERT, SWITCH_VIEW };
 
-    private Action action;
-
     private final int clientId;
     private final String token;
     private final String namespace;
 
+    private Action action;
     private String tableName;
     private Long tableVersion;
     private List<String> keyNames;
-
     private Long sequence;
     private Map data;
 
@@ -89,8 +87,10 @@ public class StitchMessage {
         setRequiredField(map, "client_id", clientId);
         setRequiredField(map, "namespace", namespace);
         setRequiredField(map, "table_name", tableName);
-        map.put("table_version", tableVersion);
 
+        if (tableVersion != null) {
+            map.put("table_version", tableVersion);
+        }
         if (action == null) {
             throw new RuntimeException("action must not be null");
         }

@@ -25,7 +25,6 @@ public class AsyncStitchClient implements Closeable {
             public void handleError(List<Map> messages, Exception e) { }
         };
 
-
     private final StitchClient client;
     private final int maxFlushIntervalMillis;
     private final int maxBytes;
@@ -33,16 +32,18 @@ public class AsyncStitchClient implements Closeable {
     private final ResponseHandler responseHandler;
 
     private final BlockingQueue<MessageWrapper> queue = new ArrayBlockingQueue<MessageWrapper>(CAPACITY);
+    private ArrayList<MessageWrapper> items = new ArrayList<MessageWrapper>();
+    private int numBytes = 0;
     private final CountDownLatch closeLatch;
 
-    private long lastFlushTime;
+    private long lastFlushTime = System.currentTimeMillis();
 
     public static class Builder {
 
-        private StitchClient.Builder clientBuilder;
-        private int maxFlushIntervalMillis;
-        private int maxBytes;
-        private int maxRecords;
+        private StitchClient.Builder clientBuilder = StitchClient.builder();
+        private int maxFlushIntervalMillis = 10000;
+        private int maxBytes = 10000000;
+        private int maxRecords = 10000;
         private ResponseHandler responseHandler = DEFAULT_RESPONSE_HANDLER;
 
         public Builder withClientId(int clientId) {
@@ -143,8 +144,6 @@ public class AsyncStitchClient implements Closeable {
     }
 
     private class Worker implements Runnable {
-        private ArrayList<MessageWrapper> items;
-        private int numBytes;
 
         public boolean shouldFlush() {
             return
@@ -188,10 +187,12 @@ public class AsyncStitchClient implements Closeable {
                     closeLatch.countDown();
                 }
 
-                items.add(item);
-                numBytes += item.bytes.length;
-                if (shouldFlush()) {
-                    flush();
+                else {
+                    items.add(item);
+                    numBytes += item.bytes.length;
+                    if (shouldFlush()) {
+                        flush();
+                    }
                 }
             }
         }

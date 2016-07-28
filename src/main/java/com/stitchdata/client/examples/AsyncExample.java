@@ -30,9 +30,11 @@ public class AsyncExample {
         String namespace = args[2];
 
         Map[] people = new Map[] {
-            makePerson(1, "Ben Franklin"),
-            makePerson(2, "Betsy Ross"),
-            makePerson(3, "Aretha Franklin")
+            makePerson(1, "Jerry Garcia"),
+            makePerson(2, "Omar Rodgriguez Lopez"),
+            makePerson(3, "Nina Simone")
+            makePerson(4, "Joni Mitchell")
+            makePerson(5, "David Bowie")
         };
 
         ResponseHandler responseHandler = new ResponseHandler() {
@@ -56,6 +58,7 @@ public class AsyncExample {
             .withClientId(clientId)
             .withToken(token)
             .withNamespace(namespace)
+            .withResponseHandler(responseHandler)
             .build();
 
         try {

@@ -59,6 +59,9 @@ public class StitchClient {
         }
     }
 
+    public static Builder builder() {
+        return new Builder();
+    }
 
     StitchClient(int clientId, String token, String namespace) {
         this.clientId = clientId;
