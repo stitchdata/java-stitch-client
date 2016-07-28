@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.Map;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -81,7 +82,7 @@ public class AsyncStitchClient implements Closeable {
     }
 
     private class Worker implements Runnable {
-        private ArrayList<hMessageWrapper> items;
+        private ArrayList<MessageWrapper> items;
         private int numBytes;
 
         public boolean shouldFlush() {

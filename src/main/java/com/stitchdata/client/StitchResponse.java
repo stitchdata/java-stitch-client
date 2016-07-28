@@ -1,4 +1,7 @@
 package com.stitchdata.client;
+import javax.json.JsonReader;
+import javax.json.Json;
+import javax.json.JsonObject;
 
 public class StitchResponse {
     private final int httpStatusCode;
@@ -11,11 +14,11 @@ public class StitchResponse {
         this.content = content;
     }
 
-    public int isOk() {
+    public boolean isOk() {
         return httpStatusCode < 300;
     }
 
-    public String getHttpStatusCode() {
+    public int getHttpStatusCode() {
         return httpStatusCode;
     }
 
@@ -29,11 +32,11 @@ public class StitchResponse {
 
     public String toString() {
         if (isOk()) {
-        return "HTTP Response Code " + httpResponseCode +
+        return "HTTP Status Code " + httpStatusCode +
             " (" + httpReasonPhrase + "): " + content.getString("message");
         }
         else {
-            return "HTTP Response Code " + httpResponseCode +
+            return "HTTP Status Code " + httpStatusCode +
                 " (" + httpReasonPhrase + "): " + content.getString("error");
         }
     }

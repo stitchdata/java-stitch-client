@@ -18,8 +18,9 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.StatusLine;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpEntity;
-import javax.json.JsonReader;
+
 import javax.json.Json;
+import javax.json.JsonReader;
 
 public class StitchClient {
 
@@ -48,9 +49,7 @@ public class StitchClient {
         return new StitchMessage(clientId, token, namespace);
     }
 
-
-
-    public void push(Collection<Map> messages) throws StitchException {
+    public StitchResponse push(List<Map> messages) throws StitchException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
         writer.write(messages);
@@ -69,19 +68,16 @@ public class StitchClient {
 
             StatusLine statusLine = response.getStatusLine();
             HttpEntity entity = response.getEntity();
-
+            JsonReader rdr = Json.createReader(entity.getContent());
+            StitchResponse stitchResponse = new StitchResponse(
+                statusLine.getStatusCode(),
+                statusLine.getReasonPhrase(),
+                rdr.readObject());
             if (statusLine.getStatusCode() >= 300) {
-                JsonReader rdr = Json.createReader(entity.getContent());
-                throw new StitchException(
-                    statusLine.getStatusCode(),
-                    statusLine.getReasonPhrase(),
-                    rdr.readObject());
+                throw new StitchException(stitchResponse);
             }
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(entity.getContent()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                System.out.println(line);
+            else {
+                return stitchResponse;
             }
         } catch (ClientProtocolException e) {
             throw new RuntimeException(e);
