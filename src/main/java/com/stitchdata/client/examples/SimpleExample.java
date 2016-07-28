@@ -1,5 +1,6 @@
 package com.stitchdata.client.examples;
 
+import java.io.IOException;
 import com.stitchdata.client.StitchClient;
 import com.stitchdata.client.StitchMessage;
 import com.stitchdata.client.StitchException;
@@ -25,7 +26,11 @@ public class SimpleExample {
         String token = args[1];
         String namespace = args[2];
 
-        StitchClient client = new StitchClient(clientId, token, namespace);
+        StitchClient client = new StitchClient.Builder()
+            .withClientId(clientId)
+            .withToken(token)
+            .withNamespace(namespace)
+            .build();
 
         Map[] people = new Map[] {
             makePerson(1, "Ben Franklin"),
@@ -44,10 +49,14 @@ public class SimpleExample {
                             .build());
             }
             catch (StitchException e) {
-                System.err.println("Error sending message to stitch: " +
-                                   e.getMessage());
+                System.err.println(e.getMessage());
                 System.exit(-1);
             }
+            catch (IOException e) {
+                System.err.println(e.getMessage());
+                System.exit(-1);
+            }
+
         }
     }
 

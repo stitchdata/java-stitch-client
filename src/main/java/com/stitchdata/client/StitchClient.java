@@ -34,8 +34,37 @@ public class StitchClient {
     private final String token;
     private final String namespace;
 
-    public StitchClient(int clientId, String token, String namespace) {
-        this(STITCH_URL, clientId, token, namespace);
+    public static class Builder {
+        private int clientId;
+        private String token;
+        private String namespace;
+
+        public Builder withClientId(int clientId) {
+            this.clientId = clientId;
+            return this;
+        }
+
+        public Builder withToken(String token) {
+            this.token = token;
+            return this;
+        }
+
+        public Builder withNamespace(String namespace) {
+            this.namespace = namespace;
+            return this;
+        }
+
+        public StitchClient build() {
+            return new StitchClient(clientId, token, namespace);
+        }
+    }
+
+
+    StitchClient(int clientId, String token, String namespace) {
+        this.clientId = clientId;
+        this.token = token;
+        this.namespace = namespace;
+        this.stitchUrl = STITCH_URL;
     }
 
     public StitchClient(String stitchUrl, int clientId, String token, String namespace) {
@@ -49,7 +78,7 @@ public class StitchClient {
         return new StitchMessage(clientId, token, namespace);
     }
 
-    public StitchResponse push(List<Map> messages) throws StitchException {
+    public StitchResponse push(List<Map> messages) throws StitchException, IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
         writer.write(messages);
@@ -64,6 +93,7 @@ public class StitchClient {
                 .connectTimeout(connectTimeout)
                 .addHeader("Authorization", "Bearer " + token)
                 .bodyString(body, CONTENT_TYPE);
+
             HttpResponse response = request.execute().returnResponse();
 
             StatusLine statusLine = response.getStatusLine();
@@ -82,13 +112,10 @@ public class StitchClient {
         } catch (ClientProtocolException e) {
             throw new RuntimeException(e);
         }
-        catch (IOException e) {
-            throw new RuntimeException(e);
-        }
 
     }
 
-    public void push(Map message) throws StitchException {
+    public void push(Map message) throws StitchException, IOException {
         ArrayList<Map> messages = new ArrayList<Map>();
         messages.add(message);
         push(messages);
