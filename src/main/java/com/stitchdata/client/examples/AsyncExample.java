@@ -1,8 +1,10 @@
 package com.stitchdata.client.examples;
 
 import java.io.IOException;
-import com.stitchdata.client.Stitch;
+
 import com.stitchdata.client.StitchClient;
+import com.stitchdata.client.StitchClient.Action;
+import com.stitchdata.client.StitchClient.Field;
 import com.stitchdata.client.StitchClientBuilder;
 import com.stitchdata.client.StitchException;
 import com.stitchdata.client.StitchResponse;
@@ -73,9 +75,9 @@ public class AsyncExample {
         try {
             for (Map person : people) {
                 Map message = new HashMap();
-                message.put(Stitch.Field.ACTION, Stitch.Action.UPSERT);
-                message.put(Stitch.Field.SEQUENCE, sequence);
-                message.put(Stitch.Field.DATA, person);
+                message.put(Field.ACTION, Action.UPSERT);
+                message.put(Field.SEQUENCE, sequence);
+                message.put(Field.DATA, person);
                 messages.add(message);
                 try {
                     stitch.put(message, responseHandler);

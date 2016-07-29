@@ -1,4 +1,4 @@
-package com.stitchdata.client.impl;
+package com.stitchdata.client;
 
 import com.stitchdata.client.*;
 
@@ -33,56 +33,14 @@ import org.apache.http.HttpEntity;
 import javax.json.Json;
 import javax.json.JsonReader;
 
-/**
- * Client for Stitch.
- *
- * This is a synchronous client.
- *
- * <pre>
- * {@code
- *
- *   // Build the client. You'll need a client id, token, and
- *   // namespace, available from http://stitchdata.com.
- *   StitchClient stitch = StitchClient.builder()
- *     .withClientId(yourClientId)
- *     .withToken(yourToken)
- *     .withNamespace(yourNamespace)
- *     .build();
- *
- *   // List of records we want to insert into a table
- *   List<Map> events = ...;
- *
- *   // The name of the table
- *   String tableName = "events";
- *
- *   // List of keys in the data map that are used to identify the record
- *   List<String> keyNames = Arrays.asList(new String[] { "eventId" });
- *
- *   // If Stitch sees multiple messages with the same identifier, it
- *   // will choose the one with the largest sequence number.
- *   long sequence = System.currentTimeMillis();
- *
- *   List<Map> messages = new ArrayList<Map>();
- *   for (Map event : events) {
- *     messages.add(stitch.newUpsertMessage(tableName, keyNames, sequence, event));
- *   }
- *
- *   try {
- *     stitch.push(messages);
- *   }
- *   catch (StitchException e) {
- *     log.error(e, "Couldn't send record");
- *   }
- * }
- * </pre>
- */
 public class StitchClientImpl implements StitchClient {
 
     private static final int CAPACITY = 10000;
 
     private static final ContentType CONTENT_TYPE = ContentType.create("application/transit+json");
 
-    private final int connectTimeout = Stitch.HTTP_CONNECT_TIMEOUT;
+    public static final int HTTP_CONNECT_TIMEOUT = 1000 * 60 * 2;
+    private final int connectTimeout = HTTP_CONNECT_TIMEOUT;
 
     private final String stitchUrl;
     private final int clientId;
@@ -104,9 +62,11 @@ public class StitchClientImpl implements StitchClient {
     private class MessageWrapper {
         byte[] bytes;
         boolean isEndOfStream;
-        MessageWrapper(byte[] bytes, boolean isEndOfStream) {
+        ResponseHandler responseHandler;
+        MessageWrapper(byte[] bytes, boolean isEndOfStream, ResponseHandler responseHandler) {
             this.bytes = bytes;
             this.isEndOfStream = isEndOfStream;
+            this.responseHandler = responseHandler;
         }
     }
 
@@ -120,21 +80,27 @@ public class StitchClientImpl implements StitchClient {
         }
 
         private void flush() {
-            ArrayList messages = new ArrayList(items.size());
+            ArrayList<Map> messages = new ArrayList<Map>(items.size());
             for (MessageWrapper item : items) {
                 ByteArrayInputStream bais = new ByteArrayInputStream(item.bytes);
                 Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
-                messages.add(reader.read());
+                messages.add((Map)reader.read());
             }
 
             try {
                 StitchResponse response = pushImpl(messages);
-                if (responseHandler != null) {
-                    responseHandler.handleOk(messages, response);
+                for (int i = 0; i < items.size(); i++) {
+                    ResponseHandler handler = items.get(i).responseHandler;
+                    if (handler != null) {
+                        handler.handleOk(messages.get(i), response);
+                    }
                 }
             } catch (Exception e) {
-                if (responseHandler != null) {
-                    responseHandler.handleError(messages, e);
+                for (int i = 0; i < items.size(); i++) {
+                    ResponseHandler handler = items.get(i).responseHandler;
+                    if (handler != null) {
+                        handler.handleError(messages.get(i), e);
+                    }
                 }
             }
 
@@ -169,15 +135,15 @@ public class StitchClientImpl implements StitchClient {
         }
     }
 
-    private MessageWrapper wrap(Map message) {
+    private MessageWrapper wrap(Map message, ResponseHandler responseHandler) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
         // using bytes to avoid storing a mutable map
         writer.write(message);
-        return new MessageWrapper(baos.toByteArray(), false);
+        return new MessageWrapper(baos.toByteArray(), false, responseHandler);
     }
 
-    public StitchClientImpl(String stitchUrl, int clientId, String token, String namespace, String tableName, List<String> keyNames,
+    StitchClientImpl(String stitchUrl, int clientId, String token, String namespace, String tableName, List<String> keyNames,
                  int maxFlushIntervalMillis, int maxBytes, int maxRecords, ResponseHandler responseHandler) {
         this.stitchUrl = stitchUrl;
         this.clientId = clientId;
@@ -203,13 +169,13 @@ public class StitchClientImpl implements StitchClient {
     public StitchResponse pushImpl(List<Map> messages) throws StitchException, IOException {
         // TODO: DOn't mutate
         for (Map message : messages) {
-            message.put(Stitch.Field.CLIENT_ID, clientId);
-            message.put(Stitch.Field.NAMESPACE, namespace);
-            if (tableName != null && !message.containsKey(Stitch.Field.TABLE_NAME)) {
-                message.put(Stitch.Field.TABLE_NAME, tableName);
+            message.put(Field.CLIENT_ID, clientId);
+            message.put(Field.NAMESPACE, namespace);
+            if (tableName != null && !message.containsKey(Field.TABLE_NAME)) {
+                message.put(Field.TABLE_NAME, tableName);
             }
-            if (keyNames != null && !message.containsKey(Stitch.Field.KEY_NAMES)) {
-                message.put(Stitch.Field.KEY_NAMES, keyNames);
+            if (keyNames != null && !message.containsKey(Field.KEY_NAMES)) {
+                message.put(Field.KEY_NAMES, keyNames);
             }
         }
 
@@ -258,16 +224,16 @@ public class StitchClientImpl implements StitchClient {
         return push(messages);
     }
 
-    public boolean offer(Map m) {
-        return queue.offer(wrap(m));
+    public boolean offer(Map m, ResponseHandler responseHandler) {
+        return queue.offer(wrap(m, responseHandler));
     }
 
-    public boolean offer(Map m, long timeout, TimeUnit unit) throws InterruptedException {
-        return queue.offer(wrap(m), timeout, unit);
+    public boolean offer(Map m, ResponseHandler responseHandler, long timeout, TimeUnit unit) throws InterruptedException {
+        return queue.offer(wrap(m, responseHandler), timeout, unit);
     }
 
-    public void put(Map m) throws InterruptedException {
-        queue.put(wrap(m));
+    public void put(Map m, ResponseHandler responseHandler) throws InterruptedException {
+        queue.put(wrap(m, responseHandler));
     }
 
     public void validate(Map message) {
@@ -276,7 +242,7 @@ public class StitchClientImpl implements StitchClient {
 
     public void close() {
         try {
-            queue.put(new MessageWrapper(null, true));
+            queue.put(new MessageWrapper(null, true, null));
             closeLatch.await();
         } catch (InterruptedException e) {
             return;

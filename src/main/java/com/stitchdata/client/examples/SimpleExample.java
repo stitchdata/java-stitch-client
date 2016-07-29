@@ -2,10 +2,11 @@ package com.stitchdata.client.examples;
 
 import java.io.IOException;
 import com.stitchdata.client.StitchClient;
+import com.stitchdata.client.StitchClient.Field;
+import com.stitchdata.client.StitchClient.Action;
 import com.stitchdata.client.StitchClientBuilder;
 import com.stitchdata.client.StitchException;
 import com.stitchdata.client.StitchResponse;
-import com.stitchdata.client.Stitch;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -54,9 +55,9 @@ public class SimpleExample {
         ArrayList<Map> messages = new ArrayList<Map>();
         for (Map person : people) {
             Map message = new HashMap();
-            message.put(Stitch.Field.ACTION, Stitch.Action.UPSERT);
-            message.put(Stitch.Field.SEQUENCE, sequence);
-            message.put(Stitch.Field.DATA, person);
+            message.put(Field.ACTION, Action.UPSERT);
+            message.put(Field.SEQUENCE, sequence);
+            message.put(Field.DATA, person);
             messages.add(message);
         }
         try {

@@ -35,14 +35,21 @@ import javax.json.JsonReader;
  * Use this to build instances of StitchClient.
  */
 public class StitchClientBuilder {
+
+    public static final int DEFAULT_MAX_FLUSH_INTERVAL_MILLIS = 10000;
+    public static final int DEFAULT_MAX_FLUSH_BYTES = 4194304;
+    public static final int DEFAULT_MAX_FLUSH_RECORDS = 20000;
+    public static final int HTTP_CONNECT_TIMEOUT = 1000 * 60 * 2;
+
+
     private int clientId;
     private String token;
     private String namespace;
     private String tableName;
     private List<String> keyNames;
-    private int maxFlushIntervalMillis = Stitch.DEFAULT_MAX_FLUSH_INTERVAL_MILLIS;
-    private int maxBytes = Stitch.DEFAULT_MAX_FLUSH_BYTES;
-    private int maxRecords = Stitch.DEFAULT_MAX_FLUSH_RECORDS;
+    private int maxFlushIntervalMillis = DEFAULT_MAX_FLUSH_INTERVAL_MILLIS;
+    private int maxBytes = DEFAULT_MAX_FLUSH_BYTES;
+    private int maxRecords = DEFAULT_MAX_FLUSH_RECORDS;
     private ResponseHandler responseHandler = null;
 
     public StitchClientBuilder withClientId(int clientId) {
@@ -97,7 +104,7 @@ public class StitchClientBuilder {
 
     public StitchClient build() {
         return new StitchClientImpl(
-            Stitch.PUSH_URL, clientId, token, namespace,
+            StitchClient.PUSH_URL, clientId, token, namespace,
             tableName, keyNames,
             maxFlushIntervalMillis,
             maxBytes,
