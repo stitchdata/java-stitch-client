@@ -1,7 +1,9 @@
 package com.stitchdata.client.examples;
 
 import java.io.IOException;
+import com.stitchdata.client.Stitch;
 import com.stitchdata.client.StitchClient;
+import com.stitchdata.client.StitchClientBuilder;
 import com.stitchdata.client.StitchException;
 import com.stitchdata.client.StitchResponse;
 import com.stitchdata.client.ResponseHandler;
@@ -59,24 +61,33 @@ public class AsyncExample {
                 }
             };
 
-        StitchClient client = StitchClient.builder()
+        StitchClient stitch = new StitchClientBuilder()
             .withClientId(clientId)
             .withToken(token)
             .withNamespace(namespace)
+            .withTableName("people")
+            .withKeyNames("id")
             .withResponseHandler(responseHandler)
             .build();
 
         try {
             for (Map person : people) {
+                Map message = new HashMap();
+                message.put(Stitch.Field.ACTION, Stitch.Action.UPSERT);
+                message.put(Stitch.Field.SEQUENCE, sequence);
+                message.put(Stitch.Field.DATA, person);
+                messages.add(message);
                 try {
-                    client.putUpsert(tableName, keyNames, sequence, person);
+                    stitch.put(message);
                 }
                 catch (InterruptedException e) {
                     System.err.println("Interrupted while putting record");
                 }
             }
         } finally {
-            client.close();
+            try {
+                stitch.close();
+            } catch (IOException e) { }
         }
     }
 

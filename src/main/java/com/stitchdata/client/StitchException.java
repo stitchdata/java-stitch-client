@@ -4,7 +4,7 @@ public class StitchException extends Exception {
 
     private final StitchResponse response;
 
-    StitchException(StitchResponse response) {
+    public StitchException(StitchResponse response) {
         this.response = response;
     }
 

@@ -2,6 +2,7 @@ package com.stitchdata.client.examples;
 
 import java.io.IOException;
 import com.stitchdata.client.StitchClient;
+import com.stitchdata.client.StitchClientBuilder;
 import com.stitchdata.client.StitchException;
 import com.stitchdata.client.StitchResponse;
 import com.stitchdata.client.Stitch;
@@ -30,10 +31,12 @@ public class SimpleExample {
         String token = args[1];
         String namespace = args[2];
 
-        StitchClient client = new StitchClient.Builder()
+        StitchClient client = new StitchClientBuilder()
             .withClientId(clientId)
             .withToken(token)
             .withNamespace(namespace)
+            .withTableName("people")
+            .withKeyNames("id")
             .build();
 
         Map[] people = new Map[] {
@@ -50,7 +53,10 @@ public class SimpleExample {
 
         ArrayList<Map> messages = new ArrayList<Map>();
         for (Map person : people) {
-            Map message = client.newUpsertMessage(tableName, keyNames, sequence, person);
+            Map message = new HashMap();
+            message.put(Stitch.Field.ACTION, Stitch.Action.UPSERT);
+            message.put(Stitch.Field.SEQUENCE, sequence);
+            message.put(Stitch.Field.DATA, person);
             messages.add(message);
         }
         try {
