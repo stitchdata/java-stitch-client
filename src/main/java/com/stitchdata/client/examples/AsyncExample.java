@@ -47,10 +47,10 @@ public class AsyncExample {
 
         ResponseHandler responseHandler = new ResponseHandler() {
 
-                public void handleOk(List<Map> messages, StitchResponse response) {
+                public void handleOk(Map message, StitchResponse response) {
                     System.out.println("Got ok: " + response);
                 }
-                public void handleError(List<Map> messages, Exception e) {
+                public void handleError(Map message, Exception e) {
                     if (e instanceof StitchException) {
                         System.out.println("Got error response from Stitch: " + e.getMessage() + ((StitchException)e).getResponse().getContent());
                     }
@@ -78,7 +78,7 @@ public class AsyncExample {
                 message.put(Stitch.Field.DATA, person);
                 messages.add(message);
                 try {
-                    stitch.put(message);
+                    stitch.put(message, responseHandler);
                 }
                 catch (InterruptedException e) {
                     System.err.println("Interrupted while putting record");

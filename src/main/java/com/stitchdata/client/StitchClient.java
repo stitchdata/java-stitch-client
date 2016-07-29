@@ -65,28 +65,29 @@ import javax.json.JsonReader;
  * }
  * </pre>
  *
- * {@link #offer(List<Map>)}
- * {@link #offer(List<Map>, long, TimeUnit)}
- * {@link #push(List<Map>)}
+ * {@link #offer(List)}
+ * {@link #offer(List, long, TimeUnit)}
+ * {@link #push(List)}
  * {@link #push(Map)}
- * {@link #put(List<Map>)}
+ * {@link #put(List)}
  */
 public interface StitchClient extends Closeable {
 
     /**
-     * Attempt to queue a message for delivery without blocking
+     * Attempt to queue a message for delivery without blocking.
      *
      * Attempts to queue the message for a background thread to
      * deliver at a later time. Does not block. returns false if the
      * message cannot be queued immediately.
      *
      * @param message the message to queue
+     * @param responseHandler invoked after the delivery is completed or fails
      * @return true if the message can be queued immediately, otherwise false.
      */
-    public boolean offer(Map message);
+    public boolean offer(Map message, ResponseHandler responseHandler);
 
     /**
-     * Attempt to queue a message for delivery with limited blocking
+     * Attempt to queue a message for delivery with limited blocking.
      *
      * Attempts to queue the message for a background thread to
      * deliver at a later time. Will return after the specified amount
@@ -96,25 +97,25 @@ public interface StitchClient extends Closeable {
      * @return true if the message can be queued within the timeout,
      *         otherwise false.
      */
-    public boolean offer(Map m, long timeout, TimeUnit unit) throws InterruptedException;
+    public boolean offer(Map m, ResponseHandler responseHandler, long timeout, TimeUnit unit) throws InterruptedException;
 
     /**
-     * Deliver list of messages immediately
+     * Deliver list of messages immediately.
      *
      * @param messages List of messages to send
      */
     public StitchResponse push(List<Map> messages) throws StitchException, IOException;
 
     /**
-     * Deliver message immediately
+     * Deliver message immediately.
      *
      * @param message messages to send
      */
     public StitchResponse push(Map message) throws StitchException, IOException;
 
     /**
-     * Queue a message for delivery, blocking
+     * Queue a message for delivery, blocking.
      */
-    public void put(Map m) throws InterruptedException;
+    public void put(Map m, ResponseHandler responseHandler) throws InterruptedException;
 
 }
