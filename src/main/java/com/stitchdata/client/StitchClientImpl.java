@@ -157,6 +157,7 @@ public class StitchClientImpl implements StitchClient {
         this.closeLatch = new CountDownLatch(1);
         this.responseHandler = responseHandler;
         Thread workerThread = new Thread(new Worker());
+        workerThread.setDaemon(true);
         workerThread.start();
     }
 

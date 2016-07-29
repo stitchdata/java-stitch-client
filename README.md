@@ -41,6 +41,18 @@ StitchClient stitch = new StitchClientBuilder()
 Building a Message
 ------------------
 
+Every stitch message is a map. The allowed field names of the map are
+listed in `StitchClient.Field`:
+
+* "client_id" - Your client identifier, obtained from http://stitchdata.com
+* "namespace" - The name you gave to the integration at http://stitchdata.com
+* "action" - The action to perform. Currently the only supported action is "upsert".
+* upsert fields:
+  * "table_name" - The name of the table to upsert records into.
+  * "key_names" - List of keys into data map that identify the record.
+  * "sequence" - Sequence number that will be used to impose ordering of updates to a single record.
+  * "data" - The record to upsert, as a map.
+
 ```java
 Map message = new HashMap();
 message.put(Field.CLIENT_ID, 1234);
@@ -55,4 +67,6 @@ Sending Messages
 ----------------
 
 The Stitch client provides several methods for sending message,
-including synchronous and asynchronous options.
+including synchronous and asynchronous options. The synchronous
+options are more straightforward, but the asynchronous options will
+offer better performance if you are sending messages frequently.

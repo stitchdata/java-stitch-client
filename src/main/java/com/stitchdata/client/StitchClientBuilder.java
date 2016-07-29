@@ -40,8 +40,6 @@ public class StitchClientBuilder {
     public static final int DEFAULT_MAX_FLUSH_BYTES = 4194304;
     public static final int DEFAULT_MAX_FLUSH_RECORDS = 20000;
 
-
-
     private int clientId;
     private String token;
     private String namespace;
