@@ -39,7 +39,7 @@ public class StitchClientBuilder {
     public static final int DEFAULT_MAX_FLUSH_INTERVAL_MILLIS = 10000;
     public static final int DEFAULT_MAX_FLUSH_BYTES = 4194304;
     public static final int DEFAULT_MAX_FLUSH_RECORDS = 20000;
-    public static final int HTTP_CONNECT_TIMEOUT = 1000 * 60 * 2;
+
 
 
     private int clientId;

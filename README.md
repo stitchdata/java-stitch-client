@@ -1,4 +1,5 @@
-## Building a Client
+Building a Client
+-----------------
 
 Use StitchClientBuilder to build a stitch client. You'll
 need to set your client id, authentication token, and namespace,
@@ -36,3 +37,22 @@ StitchClient stitch = new StitchClientBuilder()
   .withMaxRecords(100) // Flush when we hit 100 records
   .build();
 ```
+
+Building a Message
+------------------
+
+```java
+Map message = new HashMap();
+message.put(Field.CLIENT_ID, 1234);
+message.put(Field.NAMESPACE, "eventlog");
+message.put(Field.ACTION, Action.UPSERT);
+message.put(Field.TABLE_NAME, "events");
+message.put(Field.KEY_NAMES, "event_id");
+message.put(Field.SEQUENCE, System.currentTimeMillis());
+message.put(Field.DATA, data);
+```
+Sending Messages
+----------------
+
+The Stitch client provides several methods for sending message,
+including synchronous and asynchronous options.
