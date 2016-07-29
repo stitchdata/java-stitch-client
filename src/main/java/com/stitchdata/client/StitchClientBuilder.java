@@ -1,7 +1,5 @@
 package com.stitchdata.client;
 
-import com.stitchdata.client.impl.*;
-
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.UnsupportedEncodingException;
