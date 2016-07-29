@@ -3,8 +3,20 @@
   <name>Stitch SDK</name>
 
   <groupId>com.stitchdata</groupId>
-  <artifactId>client</artifactId>
-  <version>0.1-SNAPSHOT</version>
+  <artifactId>java-stitch-client</artifactId>
+  <version>0.0.1</version>
+
+  <repositories>
+    <repository>
+      <id>central</id>
+      <name>Maven Repository Switchboard</name>
+      <layout>default</layout>
+      <url>http://repo1.maven.org/maven2</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
 
   <dependencies>
     <dependency>
