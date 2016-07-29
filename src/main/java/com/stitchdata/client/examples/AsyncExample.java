@@ -59,7 +59,7 @@ public class AsyncExample {
                 }
             };
 
-        StitchClient client = AsyncStitchClient.builder()
+        StitchClient client = StitchClient.builder()
             .withClientId(clientId)
             .withToken(token)
             .withNamespace(namespace)

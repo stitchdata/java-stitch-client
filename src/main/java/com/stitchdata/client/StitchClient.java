@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.UnsupportedEncodingException;
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.util.Collection;
@@ -12,8 +13,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import com.cognitect.transit.Writer;
 import com.cognitect.transit.TransitFactory;
+import com.cognitect.transit.Reader;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.client.fluent.Response;
 import org.apache.http.client.ClientProtocolException;
@@ -176,7 +182,7 @@ public class StitchClient {
             }
 
             try {
-                StitchResponse response = client.push(messages);
+                StitchResponse response = push(messages);
                 if (responseHandler != null) {
                     responseHandler.handleOk(messages, response);
                 }
@@ -232,7 +238,8 @@ public class StitchClient {
         return new Builder();
     }
 
-    StitchClient(String stitchUrl, int clientId, String token, String namespace) {
+    StitchClient(String stitchUrl, int clientId, String token, String namespace,
+                 int maxFlushIntervalMillis, int maxBytes, int maxRecords, ResponseHandler responseHandler) {
         this.stitchUrl = stitchUrl;
         this.clientId = clientId;
         this.token = token;
@@ -326,6 +333,10 @@ public class StitchClient {
 
     public StitchResponse pushUpsert(String tableName, List<String> keyNames, long sequence, Map data) throws StitchException, IOException {
         return push(newUpsertMessage(tableName, keyNames, sequence, data));
+    }
+
+    public void putUpsert(String tableName, List<String> keyNames, long sequence, Map data) throws InterruptedException {
+        put(newUpsertMessage(tableName, keyNames, sequence, data));
     }
 
     public void validate(Map message) {
