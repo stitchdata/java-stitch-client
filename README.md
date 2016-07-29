@@ -95,6 +95,8 @@ including synchronous and asynchronous options. The synchronous
 options are more straightforward, but the asynchronous options will
 offer better performance if you are sending messages frequently.
 
+### Synchronous Delivery
+
 `push(Map message)` sends a single message and returns a
 `StitchResponse`. It throws `StitchException` if stitch rejects the
 record for some reason. There is typically no reason to inspect the
@@ -109,4 +111,18 @@ try {
 }
 ```
 
-`push(List<Map> messages)` sends a list of messages at once.
+`push(List<Map> messages)` sends a list of messages at once. Note that
+there are limitations for the number of messages and total size of
+request that Stitch will accept. If you exceed these limits, you'll
+get a `StitchException`. It's probably easier to use the asynchronous
+methods, which will ensure that the requests satisfy the limits.
+
+### Asynchronous Delivery
+
+The asynchronous methods each take a single message and put it on an
+in-memory queue, where a background thread will pick it up and deliver
+it later. All of the asynchronous methods accept an optional
+`responseHandler` argument, which the background thread will call
+after the message has been delivered, or if the delivery fails.
+
+`put(Map message)`

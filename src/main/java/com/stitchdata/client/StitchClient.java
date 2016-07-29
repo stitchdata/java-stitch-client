@@ -34,22 +34,19 @@ import javax.json.JsonReader;
 /**
  * Client for Stitch.
  *
- * <p>
- * Callers should use {@link StitchClientBuilder} to obtain instances of {@link StitchClient}.
- * </p>
+ * <p> Callers should use {@link StitchClientBuilder} to obtain
+ * instances of {@link StitchClient}.  </p>
  *
- * <p>
- * This interface provides several different methods for sending
+ * <p> This interface provides several different methods for sending
  * messages to Stith, including synchronous and various asynchronous
- * options.
- * </p>
+ * options. </p>
  *
  * <ul>
- * <li>{@link #push(Map)} - synchronous, single message</li>
- * <li>{@link #push(List)} - synchronous, batch of messages</li>
- * <li>{@link #offer(Map, ResponseHandler)} - asynchronous, non-blocking</li>
- * <li>{@link #offer(Map, ResponseHandler, long, TimeUnit)} - asynchronous, blocking with timeout</li>
- * <li>{@link #put(Map, ResponseHandler)} - asynchronous, blocking</li>
+ *   <li>{@link #push(Map)} - synchronous, single message</li>
+ *   <li>{@link #push(List)} - synchronous, batch of messages</li>
+ *   <li>{@link #offer(Map, ResponseHandler)} - asynchronous, non-blocking</li>
+ *   <li>{@link #offer(Map, ResponseHandler, long, TimeUnit)} - asynchronous, blocking with timeout</li>
+ *   <li>{@link #put(Map, ResponseHandler)} - asynchronous, blocking</li>
  * </ul>
  *
  * <p>
@@ -69,7 +66,8 @@ import javax.json.JsonReader;
  */
 public interface StitchClient extends Closeable {
 
-    public static final String PUSH_URL =  "https://pipeline-gateway.rjmetrics.com/push";
+    public static final String PUSH_URL
+        =  "https://pipeline-gateway.rjmetrics.com/push";
 
     /**
      * Allowable values for "action" field.
@@ -98,14 +96,12 @@ public interface StitchClient extends Closeable {
      * blocking. Returns false if the message cannot
      * be queued immediately.
      *
-     * <p>
-     * The caller can optionally provide a {@link ResponseHandler} in
-     * order to be notified when the message delivery is completed (or
-     * has failed). After the Gate accepts the message, the StitchClient
-     *  will call {@link ResponseHandler#handleOk(Map, StitchResponse)}.
-     * If delivery fails, it will call
-     * {@link ResponseHandler#handleError(Map, Exception)}.
-     * </p>
+     * <p> The caller can optionally provide a {@link ResponseHandler}
+     * in order to be notified when the message delivery is completed
+     * (or has failed). After the Gate accepts the message, the
+     * StitchClient will call {@link ResponseHandler#handleOk(Map,
+     * StitchResponse)}.  If delivery fails, it will call {@link
+     * ResponseHandler#handleError(Map, Exception)}. </p>
      *
      * @param message the message to queue.
      * @param responseHandler invoked after the delivery is completed or fails.
@@ -121,14 +117,12 @@ public interface StitchClient extends Closeable {
      * timeout. Will return after the specified amount of time if the
      * message cannot be queued.
      *
-     * <p>
-     * The caller can optionally provide a {@link ResponseHandler} in
-     * order to be notified when the message delivery is completed (or
-     * has failed). After the Gate accepts the message, the StitchClient
-     *  will call {@link ResponseHandler#handleOk(Map, StitchResponse)}.
-     * If delivery fails, it will call
-     * {@link ResponseHandler#handleError(Map, Exception)}.
-     * </p>
+     * <p> The caller can optionally provide a {@link ResponseHandler}
+     * in order to be notified when the message delivery is completed
+     * (or has failed). After the Gate accepts the message, the
+     * StitchClient will call {@link ResponseHandler#handleOk(Map,
+     * StitchResponse)}.  If delivery fails, it will call {@link
+     * ResponseHandler#handleError(Map, Exception)}. </p>
      *
      * @param message the message to queue.
      * @param responseHandler invoked after the delivery is completed or fails.
@@ -141,24 +135,27 @@ public interface StitchClient extends Closeable {
      * @throws InterruptedException if we were interrupted while
      *         trying to queue the message.
      */
-    public boolean offer(Map message, ResponseHandler responseHandler, long timeout, TimeUnit unit) throws InterruptedException;
+    public boolean offer(Map message, ResponseHandler responseHandler,
+                         long timeout, TimeUnit unit)
+        throws InterruptedException;
 
     /**
      * Deliver list of messages immediately.
      *
      * @param messages List of messages to send.
      * @return a {@link StitchResponse} if the push request succeeded
-     * @throws StitchException if Stitch rejected or was unable to process the messages.
+     * @throws StitchException if Stitch  was unable to process the messages.
      * @throws IOException if we had an error communicating with Stitch.
      */
-    public StitchResponse push(List<Map> messages) throws StitchException, IOException;
+    public StitchResponse push(List<Map> messages)
+        throws StitchException, IOException;
 
     /**
      * Deliver message immediately.
      *
      * @param message message to send.
      * @return a {@link StitchResponse} if the push request succeeded.
-     * @throws StitchException if Stitch rejected or was unable to process the message.
+     * @throws StitchException if Stitch  was unable to process the message.
      * @throws IOException if we had an error communicating with Stitch.
      */
     public StitchResponse push(Map message) throws StitchException, IOException;
@@ -166,20 +163,19 @@ public interface StitchClient extends Closeable {
     /**
      * Queue a message for delivery, blocking until we can queue it.
      *
-     * <p>
-     * The caller can optionally provide a {@link ResponseHandler} in
-     * order to be notified when the message delivery is completed (or
-     * has failed). After the Gate accepts the message, the StitchClient
-     *  will call {@link ResponseHandler#handleOk(Map, StitchResponse)}.
-     * If delivery fails, it will call
-     * {@link ResponseHandler#handleError(Map, Exception).}
-     * </p>
+     * <p> The caller can optionally provide a {@link ResponseHandler}
+     * in order to be notified when the message delivery is completed
+     * (or has failed). After the Gate accepts the message, the
+     * StitchClient will call {@link ResponseHandler#handleOk(Map,
+     * StitchResponse)}.  If delivery fails, it will call {@link
+     * ResponseHandler#handleError(Map, Exception).} </p>
      *
      * @param message the message to queue.
      * @param responseHandler invoked after the delivery is completed or fails.
      * @throws InterruptedException if we were interrupted while
      *         trying to queue the message.
      */
-    public void put(Map message, ResponseHandler responseHandler) throws InterruptedException;
+    public void put(Map message, ResponseHandler responseHandler)
+        throws InterruptedException;
 
 }
