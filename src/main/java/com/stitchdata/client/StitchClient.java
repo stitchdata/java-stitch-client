@@ -1,6 +1,7 @@
 package com.stitchdata.client;
 
 import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.UnsupportedEncodingException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -69,6 +70,7 @@ import javax.json.JsonReader;
  */
 public class StitchClient {
 
+    private static final int CAPACITY = 10000;
     public static final String STITCH_URL =  "https://pipeline-gateway.rjmetrics.com/push";
     private static final ContentType CONTENT_TYPE = ContentType.create("application/transit+json");
 
@@ -78,6 +80,16 @@ public class StitchClient {
     private final int clientId;
     private final String token;
     private final String namespace;
+    private final int maxFlushIntervalMillis;
+    private final int maxBytes;
+    private final int maxRecords;
+    private final ResponseHandler responseHandler;
+    private final BlockingQueue<MessageWrapper> queue = new ArrayBlockingQueue<MessageWrapper>(CAPACITY);
+    private ArrayList<MessageWrapper> items = new ArrayList<MessageWrapper>();
+    private int numBytes = 0;
+    private final CountDownLatch closeLatch;
+
+    private long lastFlushTime = System.currentTimeMillis();
 
     /**
      * Use this to build instances of StitchClient.
@@ -86,6 +98,10 @@ public class StitchClient {
         private int clientId;
         private String token;
         private String namespace;
+        private int maxFlushIntervalMillis = Stitch.DEFAULT_MAX_FLUSH_INTERVAL_MILLIS;
+        private int maxBytes = Stitch.DEFAULT_MAX_FLUSH_BYTES;
+        private int maxRecords = Stitch.DEFAULT_MAX_FLUSH_RECORDS;
+        private ResponseHandler responseHandler = null;
 
         public Builder withClientId(int clientId) {
             this.clientId = clientId;
@@ -102,9 +118,111 @@ public class StitchClient {
             return this;
         }
 
-        public StitchClient build() {
-            return new StitchClient(STITCH_URL, clientId, token, namespace);
+        public Builder withMaxFlushIntervalMillis(int maxFlushIntervalMillis) {
+            this.maxFlushIntervalMillis = maxFlushIntervalMillis;
+            return this;
         }
+
+        public Builder withMaxBytes(int maxBytes) {
+            this.maxBytes = maxBytes;
+            return this;
+        }
+
+        public Builder withMaxRecords(int maxRecords) {
+            this.maxRecords = maxRecords;
+            return this;
+        }
+
+        public Builder withResponseHandler(ResponseHandler responseHandler) {
+            this.responseHandler = responseHandler;
+            return this;
+        }
+
+
+        public StitchClient build() {
+            return new StitchClient(
+                STITCH_URL, clientId, token, namespace,
+                maxFlushIntervalMillis,
+                maxBytes,
+                maxRecords,
+                responseHandler);
+        }
+    }
+
+    private class MessageWrapper {
+        byte[] bytes;
+        boolean isEndOfStream;
+        MessageWrapper(byte[] bytes, boolean isEndOfStream) {
+            this.bytes = bytes;
+            this.isEndOfStream = isEndOfStream;
+        }
+    }
+
+    private class Worker implements Runnable {
+
+        public boolean shouldFlush() {
+            return
+                numBytes >= maxBytes ||
+                items.size() >= maxRecords ||
+                (System.currentTimeMillis() - lastFlushTime ) >= maxFlushIntervalMillis;
+        }
+
+        private void flush() {
+            ArrayList messages = new ArrayList(items.size());
+            for (MessageWrapper item : items) {
+                ByteArrayInputStream bais = new ByteArrayInputStream(item.bytes);
+                Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
+                messages.add(reader.read());
+            }
+
+            try {
+                StitchResponse response = client.push(messages);
+                if (responseHandler != null) {
+                    responseHandler.handleOk(messages, response);
+                }
+            } catch (Exception e) {
+                if (responseHandler != null) {
+                    responseHandler.handleError(messages, e);
+                }
+            }
+
+            items.clear();
+            numBytes = 0;
+            lastFlushTime = System.currentTimeMillis();
+        }
+
+        public void run() {
+            boolean running = true;
+            while (running) {
+                MessageWrapper item;
+                try {
+                    item = queue.take();
+                } catch (InterruptedException e) {
+                    return;
+                }
+                if (item.isEndOfStream) {
+                    running = false;
+                    flush();
+                    closeLatch.countDown();
+                }
+
+                else {
+                    items.add(item);
+                    numBytes += item.bytes.length;
+                    if (shouldFlush()) {
+                        flush();
+                    }
+                }
+            }
+        }
+    }
+
+    private MessageWrapper wrap(Map message) {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
+        // using bytes to avoid storing a mutable map
+        writer.write(message);
+        return new MessageWrapper(baos.toByteArray(), false);
     }
 
     /**
@@ -119,6 +237,13 @@ public class StitchClient {
         this.clientId = clientId;
         this.token = token;
         this.namespace = namespace;
+        this.maxFlushIntervalMillis = maxFlushIntervalMillis;
+        this.maxBytes = maxBytes;
+        this.maxRecords = maxRecords;
+        this.closeLatch = new CountDownLatch(1);
+        this.responseHandler = responseHandler;
+        Thread workerThread = new Thread(new Worker());
+        workerThread.start();
     }
 
     /**
@@ -165,6 +290,18 @@ public class StitchClient {
         return push(messages);
     }
 
+    public boolean offer(Map m) {
+        return queue.offer(wrap(m));
+    }
+
+    public boolean offer(Map m, long timeout, TimeUnit unit) throws InterruptedException {
+        return queue.offer(wrap(m), timeout, unit);
+    }
+
+    public void put(Map m) throws InterruptedException {
+        queue.put(wrap(m));
+    }
+
     /**
      * Create a new "upser" message.
      *
@@ -193,6 +330,15 @@ public class StitchClient {
 
     public void validate(Map message) {
         // TODO: Validate
+    }
+
+    public void close() {
+        try {
+            queue.put(new MessageWrapper(null, true));
+            closeLatch.await();
+        } catch (InterruptedException e) {
+            return;
+        }
     }
 
 }

@@ -1,7 +1,7 @@
 package com.stitchdata.client.examples;
 
 import java.io.IOException;
-import com.stitchdata.client.AsyncStitchClient;
+import com.stitchdata.client.StitchClient;
 import com.stitchdata.client.StitchException;
 import com.stitchdata.client.StitchResponse;
 import com.stitchdata.client.ResponseHandler;
@@ -59,7 +59,7 @@ public class AsyncExample {
                 }
             };
 
-        AsyncStitchClient client = AsyncStitchClient.builder()
+        StitchClient client = AsyncStitchClient.builder()
             .withClientId(clientId)
             .withToken(token)
             .withNamespace(namespace)
