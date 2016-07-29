@@ -69,7 +69,7 @@ public class AsyncExample {
         try {
             for (Map person : people) {
                 try {
-                    client.put(client.newUpsertMessage(tableName, keyNames, sequence, person));
+                    client.putUpsert(tableName, keyNames, sequence, person);
                 }
                 catch (InterruptedException e) {
                     System.err.println("Interrupted while putting record");

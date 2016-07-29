@@ -16,7 +16,13 @@ import com.cognitect.transit.Writer;
 import com.cognitect.transit.Reader;
 import com.cognitect.transit.TransitFactory;
 
-public class AsyncStitchClient implements Closeable {
+/**
+ * {@link push(Map)}
+ * {@link put(Map)}
+ * {@link offer(Map)}
+ * {@link offer(Map, int, TimeUnit)}
+ */
+public class AsyncStitchClient extends StitchClient implements Closeable {
 
     private static final int CAPACITY = 10000;
 
@@ -200,6 +206,10 @@ public class AsyncStitchClient implements Closeable {
 
     public Map newUpsertMessage(String tableName, List<String> keyNames, long sequence, Map data) {
         return client.newUpsertMessage(tableName, keyNames, sequence, data);
+    }
+
+    public void putUpsert(String tableName, List<String> keyNames, long sequence, Map data) throws InterruptedException {
+        put(newUpsertMessage(tableName, keyNames, sequence, data));
     }
 
 }

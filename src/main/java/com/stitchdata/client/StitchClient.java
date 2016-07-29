@@ -25,20 +25,63 @@ import javax.json.Json;
 import javax.json.JsonReader;
 
 /**
- * Simple client for Stitch.
+ * Client for Stitch.
+ *
+ * This is a synchronous client.
+ *
+ * <pre>
+ * {@code
+ *
+ *   // Build the client. You'll need a client id, token, and
+ *   // namespace, available from http://stitchdata.com.
+ *   StitchClient stitch = StitchClient.builder()
+ *     .withClientId(yourClientId)
+ *     .withToken(yourToken)
+ *     .withNamespace(yourNamespace)
+ *     .build();
+ *
+ *   // List of records we want to insert into a table
+ *   List<Map> events = ...;
+ *
+ *   // The name of the table
+ *   String tableName = "events";
+ *
+ *   // List of keys in the data map that are used to identify the record
+ *   List<String> keyNames = Arrays.asList(new String[] { "eventId" });
+ *
+ *   // If Stitch sees multiple messages with the same identifier, it
+ *   // will choose the one with the largest sequence number.
+ *   long sequence = System.currentTimeMillis();
+ *
+ *   List<Map> messages = new ArrayList<Map>();
+ *   for (Map event : events) {
+ *     messages.add(stitch.newUpsertMessage(tableName, keyNames, sequence, event));
+ *   }
+ *
+ *   try {
+ *     stitch.push(messages);
+ *   }
+ *   catch (StitchException e) {
+ *     log.error(e, "Couldn't send record");
+ *   }
+ * }
+ * </pre>
  */
 public class StitchClient {
 
     public static final String STITCH_URL =  "https://pipeline-gateway.rjmetrics.com/push";
     private static final ContentType CONTENT_TYPE = ContentType.create("application/transit+json");
 
-    private final int connectTimeout = 1000 * 60 * 2;
+    private final int connectTimeout = Stitch.HTTP_CONNECT_TIMEOUT;
 
     private final String stitchUrl;
     private final int clientId;
     private final String token;
     private final String namespace;
 
+    /**
+     * Use this to build instances of StitchClient.
+     */
     public static class Builder {
         private int clientId;
         private String token;
@@ -64,11 +107,14 @@ public class StitchClient {
         }
     }
 
+    /**
+     * Get a new StitchClient builder.
+     */
     public static Builder builder() {
         return new Builder();
     }
 
-    public StitchClient(String stitchUrl, int clientId, String token, String namespace) {
+    StitchClient(String stitchUrl, int clientId, String token, String namespace) {
         this.stitchUrl = stitchUrl;
         this.clientId = clientId;
         this.token = token;
@@ -79,7 +125,7 @@ public class StitchClient {
      * Push a list of messages, blocking until Stitch accepts them.
      *
      * @param messages List of messages to send. Use
-     *                 client.createMessage() to create messages.
+     *                 client.newUpsertMessage() to create messages.
      */
     public StitchResponse push(List<Map> messages) throws StitchException, IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -119,6 +165,16 @@ public class StitchClient {
         return push(messages);
     }
 
+    /**
+     * Create a new "upser" message.
+     *
+     * @param tableName name of the table to upsert into
+     * @param keyNames keys into data that identify the record
+     * @param sequence used to enforce ordering for records
+     * @param data the record to insert, as a map
+     * @return A new Map, populated with all the fields that {@link #push(Map)} requires.
+     */
+
     public Map newUpsertMessage(String tableName, List<String> keyNames, long sequence, Map data) {
         Map<String,Object> message = new HashMap<String,Object>();
         message.put(Stitch.Field.CLIENT_ID, clientId);
@@ -129,6 +185,10 @@ public class StitchClient {
         message.put(Stitch.Field.SEQUENCE, sequence);
         message.put(Stitch.Field.DATA, data);
         return message;
+    }
+
+    public StitchResponse pushUpsert(String tableName, List<String> keyNames, long sequence, Map data) throws StitchException, IOException {
+        return push(newUpsertMessage(tableName, keyNames, sequence, data));
     }
 
     public void validate(Map message) {
