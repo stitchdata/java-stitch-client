@@ -63,6 +63,30 @@ message.put(Field.KEY_NAMES, "event_id");
 message.put(Field.SEQUENCE, System.currentTimeMillis());
 message.put(Field.DATA, data);
 ```
+
+In a typical use case, several of the fields will be the same for all
+messages that you send using a single client. To make this use case
+more convenient, you can set some of those fields on the client using
+`StitchClientBuilder`. The resulting client will inject the values for
+those fields into every message it sends.
+
+```java
+StitchClient stitch = new StitchClientBuilder()
+  .withClientId(yourClientId)
+  .withToken(yourToken)
+  .withNamespace(yourNamespace)
+  .withTableName("events")
+  .withKeyNames("id")
+  .build();
+
+// I can omit client id, namespace, table name, and key names
+Map message = new HashMap();
+message.put(Field.ACTION, Action.UPSERT);
+message.put(Field.SEQUENCE, System.currentTimeMillis());
+message.put(Field.DATA, data);
+stitch.push(message);
+```
+
 Sending Messages
 ----------------
 
@@ -70,3 +94,19 @@ The Stitch client provides several methods for sending message,
 including synchronous and asynchronous options. The synchronous
 options are more straightforward, but the asynchronous options will
 offer better performance if you are sending messages frequently.
+
+`push(Map message)` sends a single message and returns a
+`StitchResponse`. It throws `StitchException` if stitch rejects the
+record for some reason. There is typically no reason to inspect the
+StitchResponse. If `push` doesn't throw, that means Stitch accepted
+the message.
+
+```java
+try {
+  stitch.push(message);
+} catch (StitchException e) {
+  // Handle error...
+}
+```
+
+`push(List<Map> messages)` sends a list of messages at once.
