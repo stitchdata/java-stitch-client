@@ -13,25 +13,15 @@ StitchClient stitch = new StitchClientBuilder()
   .build();
 ```
 
-If you will be using this clients to push records into a single
-table, you may find it convenient to specify the table and key
-names in the client.
-
-```java
-StitchClient stitch = new StitchClientBuilder()
-  // ...
-  .withTableName("events")
-  .withKeyNames("id")
-  .build();
-```
-
 If you will be using the asynchronous delivery methods, and you want
 finer control over how frequently the background thread sends
 messages, there are several methods for adjusting those parameters:
 
 ```java
 StitchClient stitch = new StitchClientBuilder()
-  // ...
+  .withClientId(yourClientId)
+  .withToken(yourToken)
+  .withNamespace(yourNamespace)
   .withMaxFlushIntervalMillis(60000) // Flush at least once a minute
   .withMaxBytes(1000000) // Flush when we hit 1 Mb of serialized data
   .withMaxRecords(100) // Flush when we hit 100 records
@@ -47,7 +37,7 @@ listed in `StitchClient.Field`:
 * "client_id" - Your client identifier, obtained from http://stitchdata.com
 * "namespace" - The name you gave to the integration at http://stitchdata.com
 * "action" - The action to perform. Currently the only supported action is "upsert".
-* upsert fields:
+* Fields for "upsert" action:
   * "table_name" - The name of the table to upsert records into.
   * "key_names" - List of keys into data map that identify the record.
   * "sequence" - Sequence number that will be used to impose ordering of updates to a single record.
@@ -92,16 +82,16 @@ Sending Messages
 
 The Stitch client provides several methods for sending message,
 including synchronous and asynchronous options. The synchronous
-options are more straightforward, but the asynchronous options will
-offer better performance if you are sending messages frequently.
+options are suitable for low-frequency streams, but the asynchronous
+options will offer better performance if you are sending messages
+frequently.
 
 ### Synchronous Delivery
 
-`push(Map message)` sends a single message and returns a
+`push(Map message)` sends a single record and returns a
 `StitchResponse`. It throws `StitchException` if stitch rejects the
-record for some reason. There is typically no reason to inspect the
-StitchResponse. If `push` doesn't throw, that means Stitch accepted
-the message.
+record. There is typically no reason to inspect the StitchResponse -- if
+`push` doesn't throw, that means Stitch accepted the record.
 
 ```java
 try {
@@ -111,7 +101,7 @@ try {
 }
 ```
 
-`push(List<Map> messages)` sends a list of messages at once. Note that
+`push(List<Map> messages)` sends a list of records at once. Note that
 there are limitations for the number of messages and total size of
 request that Stitch will accept. If you exceed these limits, you'll
 get a `StitchException`. It's probably easier to use the asynchronous
@@ -125,4 +115,44 @@ it later. All of the asynchronous methods accept an optional
 `responseHandler` argument, which the background thread will call
 after the message has been delivered, or if the delivery fails.
 
-`put(Map message)`
+`put(Map message, ResponseHandler responseHandler)` puts a record onto
+the queue, blocking if there is no room in the queue. `offer(Map
+message, ResponseHandler responseHandler)` is a non-blocking
+version. If the message can be queued, `offer` will queue it and
+return true immediately. If not, it will return false. `offer(Map
+message, ResponseHandler responseHandler, long timeout, TimeUnit
+unit)` will block for up to the specified time limit attempting to
+queue the record.
+
+#### Creating a Response Handler
+
+```java
+ResponseHandler hander = new ResponseHandler() {
+
+    void handleOk(Map message, StitchResponse response) {
+        log.debug("Delivered a message");
+    }
+    void handleError(Map message, StitchException exception) {
+        log.error(exception, "Error sending message ");
+    }
+}
+```
+
+#### Blocking
+
+```java
+try {
+    stitch.put(message, responseHandler);
+} catch (InterruptedException e) {
+    log.warn(e, "Interrupted while queueing message");
+}
+```
+
+#### Non-Blocking
+
+```java
+boolean queued = stitch.offer(message, responseHandler);
+if (!queued) {
+    log.warn("Queue is full");
+}
+```

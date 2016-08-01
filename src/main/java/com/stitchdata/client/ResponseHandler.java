@@ -11,6 +11,21 @@ import java.util.Map;
  * <p><em>Note: These methods will be called by the background thread that
  * delivers messages to stitch, so implementations should take care to
  * avoid blocking or io-intensive operations.</em></p>
+ *
+ * <h3>Example: Logging responses</h3>
+ *
+ * <pre>
+ * {@code
+ * public class LoggingResponseHandler implements ResponseHandler {
+ *   public void handleOk(Map message, StitchResponse response) {
+ *     log.debug("Message delivery succeeded" + response.toString());
+ *   }
+ *   public void handleError(Map message, Exception exception) {
+ *     log.debug("Message delivery failed" + exception.getMessage());
+ *   }
+ * }
+ * }
+ * </pre>
  */
 public interface ResponseHandler  {
 

@@ -3,6 +3,9 @@ import javax.json.JsonReader;
 import javax.json.Json;
 import javax.json.JsonObject;
 
+/**
+ * Encapsulates a response received from Stitch.
+ */
 public class StitchResponse {
     private final int httpStatusCode;
     private final String httpReasonPhrase;
@@ -14,6 +17,14 @@ public class StitchResponse {
         this.content = content;
     }
 
+    /**
+     * Returns true if the request succeeded.
+     *
+     * @return <ul>
+     *           <li>true - if the request succeeded</li>
+     *           <li>false - if the request failed</li>
+     *         </ul>
+     */
     public boolean isOk() {
         return httpStatusCode < 300;
     }

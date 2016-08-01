@@ -55,7 +55,10 @@ public class SimpleExample {
         ArrayList<Map> messages = new ArrayList<Map>();
         for (Map person : people) {
             Map message = new HashMap();
-            message.put(Field.ACTION, Action.UPSERT);
+            Integer id = (Integer)person.get("id");
+            if (id % 2 == 0) {
+                message.put(Field.ACTION, Action.UPSERT);
+            }
             message.put(Field.SEQUENCE, sequence);
             message.put(Field.DATA, person);
             messages.add(message);
