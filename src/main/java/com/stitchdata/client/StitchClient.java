@@ -16,7 +16,6 @@ import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import com.cognitect.transit.Writer;
 import com.cognitect.transit.TransitFactory;
 import com.cognitect.transit.Reader;
@@ -45,7 +44,7 @@ import javax.json.JsonReader;
  *   <li>{@link #push(Map)} - synchronous, single message</li>
  *   <li>{@link #push(List)} - synchronous, batch of messages</li>
  *   <li>{@link #offer(Map, ResponseHandler)} - asynchronous, non-blocking</li>
- *   <li>{@link #offer(Map, ResponseHandler, long, TimeUnit)} - asynchronous, blocking with timeout</li>
+ *   <li>{@link #offer(Map, ResponseHandler, long)} - asynchronous, blocking with timeout</li>
  *   <li>{@link #put(Map, ResponseHandler)} - asynchronous, blocking</li>
  * </ul>
  *
@@ -56,7 +55,7 @@ import javax.json.JsonReader;
  * </p>
  *
  * <p> The asynchronous methods ({@link #offer(Map, ResponseHandler)},
- * {@link #offer(Map, ResponseHandler, long, TimeUnit)}, {@link
+ * {@link #offer(Map, ResponseHandler, long)}, {@link
  * #put(Map, ResponseHandler)} put the message on an in-memory
  * queue. The messages will be delivered by a background thread. If
  * you want to be notified when a message is delivered or if delivery
@@ -126,8 +125,7 @@ public interface StitchClient extends Closeable {
      *
      * @param message the message to queue.
      * @param responseHandler invoked after the delivery is completed or fails.
-     * @param timeout amount of time to wait for queueing.
-     * @param unit unit of timeout.
+     * @param timeoutMillis milliseconds to wait for queueing.
      * @return <ul>
      *           <li>true - if the message can be queued immediately</li>
      *           <li>false - otherwise</li>
@@ -136,7 +134,7 @@ public interface StitchClient extends Closeable {
      *         trying to queue the message.
      */
     public boolean offer(Map message, ResponseHandler responseHandler,
-                         long timeout, TimeUnit unit)
+                         long timeoutMillis)
         throws InterruptedException;
 
     /**

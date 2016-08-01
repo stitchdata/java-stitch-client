@@ -16,8 +16,8 @@ StitchClient stitch = new StitchClientBuilder()
 Building a Message
 ------------------
 
-Every stitch message is a map. The allowed field names of the map are
-listed in `StitchClient.Field`:
+Every stitch message is a map. The allowed field names are listed in
+`StitchClient.Field`:
 
 * "client_id" - Your client identifier, obtained from http://stitchdata.com
 * "namespace" - The name you gave to the integration at http://stitchdata.com
@@ -105,9 +105,9 @@ the queue, blocking if there is no room in the queue. `offer(Map
 message, ResponseHandler responseHandler)` is a non-blocking
 version. If the message can be queued, `offer` will queue it and
 return true immediately. If not, it will return false. `offer(Map
-message, ResponseHandler responseHandler, long timeout, TimeUnit
-unit)` will block for up to the specified time limit attempting to
-queue the record.
+message, ResponseHandler responseHandler, long timeout)` will block
+for up to the specified number of milliseconds attempting to queue the
+record.
 
 #### Creating a Response Handler
 
@@ -139,6 +139,19 @@ try {
 boolean queued = stitch.offer(message, responseHandler);
 if (!queued) {
     log.warn("Queue is full");
+}
+```
+
+#### With Timeout
+
+```java
+try {
+    boolean queued = stitch.offer(message, responseHandler, 10000);
+    if (!queued) {
+        log.warn("Unable to queue message within 10 seconds");
+    }
+} catch (InterruptedException e) {
+    log.warn(e, "Interrupted while queueing message");
 }
 ```
 

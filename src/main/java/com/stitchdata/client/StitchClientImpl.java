@@ -229,8 +229,8 @@ public class StitchClientImpl implements StitchClient {
         return queue.offer(wrap(m, responseHandler));
     }
 
-    public boolean offer(Map m, ResponseHandler responseHandler, long timeout, TimeUnit unit) throws InterruptedException {
-        return queue.offer(wrap(m, responseHandler), timeout, unit);
+    public boolean offer(Map m, ResponseHandler responseHandler, long timeout) throws InterruptedException {
+        return queue.offer(wrap(m, responseHandler), timeout, TimeUnit.MILLISECONDS);
     }
 
     public void put(Map m, ResponseHandler responseHandler) throws InterruptedException {
