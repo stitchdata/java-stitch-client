@@ -13,21 +13,6 @@ StitchClient stitch = new StitchClientBuilder()
   .build();
 ```
 
-If you will be using the asynchronous delivery methods, and you want
-finer control over how frequently the background thread sends
-messages, there are several methods for adjusting those parameters:
-
-```java
-StitchClient stitch = new StitchClientBuilder()
-  .withClientId(yourClientId)
-  .withToken(yourToken)
-  .withNamespace(yourNamespace)
-  .withMaxFlushIntervalMillis(60000) // Flush at least once a minute
-  .withMaxBytes(1000000) // Flush when we hit 1 Mb of serialized data
-  .withMaxRecords(100) // Flush when we hit 100 records
-  .build();
-```
-
 Building a Message
 ------------------
 
@@ -155,4 +140,21 @@ boolean queued = stitch.offer(message, responseHandler);
 if (!queued) {
     log.warn("Queue is full");
 }
+```
+
+#### Tuning
+
+If you will be using the asynchronous delivery methods, and you want
+finer control over how frequently the background thread sends
+messages, there are several methods for adjusting those parameters:
+
+```java
+StitchClient stitch = new StitchClientBuilder()
+  .withClientId(yourClientId)
+  .withToken(yourToken)
+  .withNamespace(yourNamespace)
+  .withMaxFlushIntervalMillis(60000) // Flush at least once a minute
+  .withMaxBytes(1000000) // Flush when we hit 1 Mb of serialized data
+  .withMaxRecords(100) // Flush when we hit 100 records
+  .build();
 ```
