@@ -6,6 +6,7 @@ import com.stitchdata.client.StitchClient.Field;
 import com.stitchdata.client.StitchClient.Action;
 import com.stitchdata.client.StitchClientBuilder;
 import com.stitchdata.client.StitchException;
+import com.stitchdata.client.StitchMessage;
 import com.stitchdata.client.StitchResponse;
 import java.util.Arrays;
 import java.util.List;
@@ -52,16 +53,13 @@ public class SimpleExample {
         List<String> keyNames = Arrays.asList(new String[] { "id" });
         long sequence = System.currentTimeMillis();
 
-        ArrayList<Map> messages = new ArrayList<Map>();
+        ArrayList<StitchMessage> messages = new ArrayList<StitchMessage>();
         for (Map person : people) {
-            Map message = new HashMap();
-            Integer id = (Integer)person.get("id");
-            if (id % 2 == 0) {
-                message.put(Field.ACTION, Action.UPSERT);
-            }
-            message.put(Field.SEQUENCE, sequence);
-            message.put(Field.DATA, person);
-            messages.add(message);
+            messages.add(
+                new StitchMessage()
+                .withAction(Action.UPSERT)
+                .withSequence(sequence)
+                .withData(person));
         }
         try {
             StitchResponse response = client.push(messages);

@@ -135,11 +135,36 @@ public class StitchClientImpl implements StitchClient {
         }
     }
 
-    private MessageWrapper wrap(Map message, ResponseHandler responseHandler) {
+    private void putWithDefault(Map map, String key, Object value, Object defaultValue) {
+        map.put(key, value != null ? value : defaultValue);
+    }
+
+    private void putIfNotNull(Map map, String key, Object value) {
+        if (value != null) {
+            map.put(key, value);
+        }
+    }
+
+    private Map messageToMap(StitchMessage message) {
+        HashMap map = new HashMap();
+
+        map.put(Field.CLIENT_ID, clientId);
+        map.put(Field.NAMESPACE, namespace);
+
+        putWithDefault(map, Field.TABLE_NAME, message.getTableName(), tableName);
+        putWithDefault(map, Field.KEY_NAMES, message.getKeyNames(), keyNames);
+
+        putIfNotNull(map, Field.TABLE_VERSION, message.getTableVersion());
+        putIfNotNull(map, Field.SEQUENCE, message.getSequence());
+        putIfNotNull(map, Field.DATA, message.getData());
+
+        return map;
+    }
+
+    private MessageWrapper wrap(StitchMessage message, ResponseHandler responseHandler) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
-        // using bytes to avoid storing a mutable map
-        writer.write(message);
+        writer.write(messageToMap(message));
         return new MessageWrapper(baos.toByteArray(), false, responseHandler);
     }
 
@@ -161,24 +186,15 @@ public class StitchClientImpl implements StitchClient {
         workerThread.start();
     }
 
-    /**
-     * Push a list of messages, blocking until Stitch accepts them.
-     *
-     * @param messages List of messages to send. Use
-     *                 client.newUpsertMessage() to create messages.
-     */
-    public StitchResponse pushImpl(List<Map> messages) throws StitchException, IOException {
-        // TODO: DOn't mutate
-        for (Map message : messages) {
-            message.put(Field.CLIENT_ID, clientId);
-            message.put(Field.NAMESPACE, namespace);
-            if (tableName != null && !message.containsKey(Field.TABLE_NAME)) {
-                message.put(Field.TABLE_NAME, tableName);
-            }
-            if (keyNames != null && !message.containsKey(Field.KEY_NAMES)) {
-                message.put(Field.KEY_NAMES, keyNames);
-            }
+    public StitchResponse push(List<StitchMessage> messages) throws StitchException, IOException {
+        List<Map> maps = new ArrayList<Map>();
+        for (StitchMessage message : messages) {
+            maps.add(messageToMap(message));
         }
+        return pushImpl(maps);
+    }
+
+    public StitchResponse pushImpl(List<Map> messages) throws StitchException, IOException {
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
@@ -211,34 +227,22 @@ public class StitchClientImpl implements StitchClient {
         }
     }
 
-    public StitchResponse push(List<Map> messages) throws StitchException, IOException {
-        List<Map> copy = new ArrayList<Map>();
-        for (Map message : messages) {
-            copy.add(new HashMap(message));
-        }
-        return pushImpl(copy);
-    }
-
-    public StitchResponse push(Map message) throws StitchException, IOException {
-        ArrayList<Map> messages = new ArrayList<Map>();
+    public StitchResponse push(StitchMessage message) throws StitchException, IOException {
+        ArrayList<StitchMessage> messages = new ArrayList<StitchMessage>();
         messages.add(message);
         return push(messages);
     }
 
-    public boolean offer(Map m, ResponseHandler responseHandler) {
+    public boolean offer(StitchMessage m, ResponseHandler responseHandler) {
         return queue.offer(wrap(m, responseHandler));
     }
 
-    public boolean offer(Map m, ResponseHandler responseHandler, long timeout) throws InterruptedException {
+    public boolean offer(StitchMessage m, ResponseHandler responseHandler, long timeout) throws InterruptedException {
         return queue.offer(wrap(m, responseHandler), timeout, TimeUnit.MILLISECONDS);
     }
 
-    public void put(Map m, ResponseHandler responseHandler) throws InterruptedException {
+    public void put(StitchMessage m, ResponseHandler responseHandler) throws InterruptedException {
         queue.put(wrap(m, responseHandler));
-    }
-
-    public void validate(Map message) {
-        // TODO: Validate
     }
 
     public void close() {
