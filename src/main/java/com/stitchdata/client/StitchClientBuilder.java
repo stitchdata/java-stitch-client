@@ -35,18 +35,17 @@ import javax.json.JsonReader;
  */
 public class StitchClientBuilder {
 
-    public static final int DEFAULT_MAX_FLUSH_INTERVAL_MILLIS = 10000;
-    public static final int DEFAULT_MAX_FLUSH_BYTES = 4194304;
-    public static final int DEFAULT_MAX_FLUSH_RECORDS = 20000;
+    public static final int DEFAULT_FLUSH_INTERVAL_MILLIS = 60000;
+    public static final int DEFAULT_BUFFER_SIZE = 0;
+    public static final int MAX_BUFFER_SIZE = 4194304;
 
     private int clientId;
     private String token;
     private String namespace;
     private String tableName;
     private List<String> keyNames;
-    private int maxFlushIntervalMillis = DEFAULT_MAX_FLUSH_INTERVAL_MILLIS;
-    private int maxBytes = DEFAULT_MAX_FLUSH_BYTES;
-    private int maxRecords = 20000;
+    private int flushIntervalMillis = DEFAULT_FLUSH_INTERVAL_MILLIS;
+    private int bufferSize = DEFAULT_BUFFER_SIZE;
 
     public StitchClientBuilder withClientId(int clientId) {
         this.clientId = clientId;
@@ -77,18 +76,13 @@ public class StitchClientBuilder {
         return withKeyNames(Arrays.asList(keyNames));
     }
 
-    public StitchClientBuilder withMaxFlushIntervalMillis(int maxFlushIntervalMillis) {
-        this.maxFlushIntervalMillis = maxFlushIntervalMillis;
+    public StitchClientBuilder withMaxFlushIntervalMillis(int flushIntervalMillis) {
+        this.flushIntervalMillis = flushIntervalMillis;
         return this;
     }
 
-    public StitchClientBuilder withMaxBytes(int maxBytes) {
-        this.maxBytes = maxBytes;
-        return this;
-    }
-
-    public StitchClientBuilder withMaxRecords(int maxRecords) {
-        this.maxRecords = maxRecords;
+    public StitchClientBuilder withBufferSize(int bufferSize) {
+        this.bufferSize = bufferSize;
         return this;
     }
 
@@ -96,8 +90,7 @@ public class StitchClientBuilder {
         return new StitchClientImpl(
             StitchClient.PUSH_URL, clientId, token, namespace,
             tableName, keyNames,
-            maxFlushIntervalMillis,
-            maxBytes,
-            maxRecords);
+            flushIntervalMillis,
+            bufferSize);
     }
 }

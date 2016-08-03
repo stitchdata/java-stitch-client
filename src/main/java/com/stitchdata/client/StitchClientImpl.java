@@ -40,9 +40,8 @@ public class StitchClientImpl implements StitchClient {
     private final String namespace;
     private final String tableName;
     private final List<String> keyNames;
-    private final int maxFlushIntervalMillis;
-    private final int maxBytes;
-    private final int maxRecords;
+    private final int flushIntervalMillis;
+    private final int bufferSize;
 
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     private final Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, buffer);
@@ -54,7 +53,7 @@ public class StitchClientImpl implements StitchClient {
         byte[] bytes;
     }
 
-    private void flush() throws IOException {
+    public void flush() throws IOException {
         System.out.println(buffer.toString());
         if (buffer.size() == 0) {
             return;
@@ -126,25 +125,32 @@ public class StitchClientImpl implements StitchClient {
         return map;
     }
 
-    StitchClientImpl(String stitchUrl, int clientId, String token, String namespace, String tableName, List<String> keyNames,
-                     int maxFlushIntervalMillis, int maxBytes, int maxRecords) {
+    StitchClientImpl(
+        String stitchUrl,
+        int clientId,
+        String token,
+        String namespace,
+        String tableName,
+        List<String> keyNames,
+        int flushIntervalMillis,
+        int bufferSize)
+    {
         this.stitchUrl = stitchUrl;
         this.clientId = clientId;
         this.token = token;
         this.namespace = namespace;
         this.tableName = tableName;
         this.keyNames = keyNames;
-        this.maxFlushIntervalMillis = maxFlushIntervalMillis;
-        this.maxBytes = maxBytes;
-        this.maxRecords = maxRecords;
+        this.flushIntervalMillis = flushIntervalMillis;
+        this.bufferSize = bufferSize;
     }
 
     public void push(StitchMessage message) throws StitchException, IOException {
 
         writer.write(messageToMap(message));
         numRecords++;
-        if (buffer.size() >= maxBytes ||
-            (System.currentTimeMillis() - lastFlushTime ) >= maxFlushIntervalMillis) {
+        if (buffer.size() >= bufferSize ||
+            (System.currentTimeMillis() - lastFlushTime ) >= flushIntervalMillis) {
             flush();
         }
     }

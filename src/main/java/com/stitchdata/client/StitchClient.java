@@ -1,40 +1,14 @@
 package com.stitchdata.client;
 
-import java.io.ByteArrayOutputStream;
-import java.io.ByteArrayInputStream;
-import java.io.UnsupportedEncodingException;
-import java.io.BufferedReader;
 import java.io.Closeable;
-import java.io.InputStreamReader;
+import java.io.Flushable;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import com.cognitect.transit.Writer;
-import com.cognitect.transit.TransitFactory;
-import com.cognitect.transit.Reader;
-import org.apache.http.client.fluent.Request;
-import org.apache.http.client.fluent.Response;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.entity.ContentType;
-import org.apache.http.StatusLine;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpEntity;
-
-import javax.json.Json;
-import javax.json.JsonReader;
 
 /**
  * Client for Stitch.
  *
- * <p> Callers should use {@link StitchClientBuilder} to obtain
- * instances of {@link StitchClient}.  </p>
+ * <p>Callers should use {@link StitchClientBuilder} to obtain
+ * instances of {@link StitchClient}.</p>
  *
  * <p> This interface provides several different methods for sending
  * messages to Stith, including synchronous and various asynchronous
@@ -59,7 +33,7 @@ import javax.json.JsonReader;
  * {@code null} ResponseHandler, you will not be notified after a
  * message is delivered, and failures will be silently ignored. </p>
  */
-public interface StitchClient extends Closeable {
+public interface StitchClient extends Closeable, Flushable {
 
     public static final String PUSH_URL
         =  "https://pipeline-gateway.rjmetrics.com/push";
@@ -87,7 +61,7 @@ public interface StitchClient extends Closeable {
     }
 
     /**
-     * Deliver message immediately.
+     * Push message to Stitch. Note that the implementation may buffer messages in memory
      *
      * @param message message to send.
      * @return a {@link StitchResponse} if the push request succeeded.
