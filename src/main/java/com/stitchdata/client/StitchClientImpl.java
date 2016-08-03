@@ -7,6 +7,7 @@ import java.io.ByteArrayInputStream;
 import java.io.UnsupportedEncodingException;
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.EOFException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -42,25 +43,27 @@ public class StitchClientImpl implements StitchClient {
     private final int maxFlushIntervalMillis;
     private final int maxBytes;
     private final int maxRecords;
-    private ArrayList<MessageWrapper> buffer = new ArrayList<MessageWrapper>();
-    private int numBytes = 0;
+
+    private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    private final Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, buffer);
 
     private long lastFlushTime = System.currentTimeMillis();
+    private int numRecords = 0;
 
     private class MessageWrapper {
         byte[] bytes;
     }
 
     private void flush() throws IOException {
-
-        if (buffer.isEmpty()) {
+        System.out.println(buffer.toString());
+        if (buffer.size() == 0) {
             return;
         }
 
         ArrayList<Map> messages = new ArrayList<Map>(buffer.size());
-        for (MessageWrapper item : buffer) {
-            ByteArrayInputStream bais = new ByteArrayInputStream(item.bytes);
-            Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
+        ByteArrayInputStream bais = new ByteArrayInputStream(buffer.toByteArray());
+        Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
+        for (int i = 0; i < numRecords; i++) {
             messages.add((Map)reader.read());
         }
 
@@ -68,7 +71,7 @@ public class StitchClientImpl implements StitchClient {
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
         writer.write(messages);
         String body = baos.toString("UTF-8");
-
+        System.out.println(body);
         try {
             Request request = Request.Post(stitchUrl)
                 .connectTimeout(connectTimeout)
@@ -91,8 +94,8 @@ public class StitchClientImpl implements StitchClient {
             throw new RuntimeException(e);
         }
 
-        buffer.clear();
-        numBytes = 0;
+        buffer.reset();
+        numRecords = 0;
         lastFlushTime = System.currentTimeMillis();
     }
 
@@ -137,15 +140,10 @@ public class StitchClientImpl implements StitchClient {
     }
 
     public void push(StitchMessage message) throws StitchException, IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        MessageWrapper wrapper = new MessageWrapper();
-        Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
+
         writer.write(messageToMap(message));
-        wrapper.bytes = baos.toByteArray();
-        buffer.add(wrapper);
-        numBytes += wrapper.bytes.length;
-        if (numBytes >= maxBytes ||
-            buffer.size() >= maxRecords ||
+        numRecords++;
+        if (buffer.size() >= maxBytes ||
             (System.currentTimeMillis() - lastFlushTime ) >= maxFlushIntervalMillis) {
             flush();
         }

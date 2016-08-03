@@ -45,8 +45,8 @@ public class StitchClientBuilder {
     private String tableName;
     private List<String> keyNames;
     private int maxFlushIntervalMillis = DEFAULT_MAX_FLUSH_INTERVAL_MILLIS;
-    private int maxBytes = 0;
-    private int maxRecords = 0;
+    private int maxBytes = DEFAULT_MAX_FLUSH_BYTES;
+    private int maxRecords = 20000;
 
     public StitchClientBuilder withClientId(int clientId) {
         this.clientId = clientId;
