@@ -52,6 +52,11 @@ public class StitchClientImpl implements StitchClient {
     }
 
     private void flush() throws IOException {
+
+        if (buffer.isEmpty()) {
+            return;
+        }
+
         ArrayList<Map> messages = new ArrayList<Map>(buffer.size());
         for (MessageWrapper item : buffer) {
             ByteArrayInputStream bais = new ByteArrayInputStream(item.bytes);
@@ -110,6 +115,7 @@ public class StitchClientImpl implements StitchClient {
         putWithDefault(map, Field.TABLE_NAME, message.getTableName(), tableName);
         putWithDefault(map, Field.KEY_NAMES, message.getKeyNames(), keyNames);
 
+        putIfNotNull(map, Field.ACTION, message.getAction());
         putIfNotNull(map, Field.TABLE_VERSION, message.getTableVersion());
         putIfNotNull(map, Field.SEQUENCE, message.getSequence());
         putIfNotNull(map, Field.DATA, message.getData());

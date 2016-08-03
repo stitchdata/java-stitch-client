@@ -42,13 +42,8 @@ public class StitchResponse {
     }
 
     public String toString() {
-        if (isOk()) {
+        String details = content.toString();
         return "HTTP Status Code " + httpStatusCode +
-            " (" + httpReasonPhrase + "): " + content.getString("message");
-        }
-        else {
-            return "HTTP Status Code " + httpStatusCode +
-                " (" + httpReasonPhrase + "): " + content.getString("error");
-        }
+            " (" + httpReasonPhrase + "): " + details;
     }
 }

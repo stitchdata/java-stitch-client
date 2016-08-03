@@ -45,9 +45,8 @@ public class StitchClientBuilder {
     private String tableName;
     private List<String> keyNames;
     private int maxFlushIntervalMillis = DEFAULT_MAX_FLUSH_INTERVAL_MILLIS;
-    private int maxBytes = DEFAULT_MAX_FLUSH_BYTES;
-    private int maxRecords = DEFAULT_MAX_FLUSH_RECORDS;
-    private ResponseHandler responseHandler = null;
+    private int maxBytes = 0;
+    private int maxRecords = 0;
 
     public StitchClientBuilder withClientId(int clientId) {
         this.clientId = clientId;
@@ -93,19 +92,12 @@ public class StitchClientBuilder {
         return this;
     }
 
-    public StitchClientBuilder withResponseHandler(ResponseHandler responseHandler) {
-        this.responseHandler = responseHandler;
-        return this;
-    }
-
-
     public StitchClient build() {
         return new StitchClientImpl(
             StitchClient.PUSH_URL, clientId, token, namespace,
             tableName, keyNames,
             maxFlushIntervalMillis,
             maxBytes,
-            maxRecords,
-            responseHandler);
+            maxRecords);
     }
 }

@@ -23,6 +23,11 @@ public class SimpleExample {
         return result;
     }
 
+    public static void exitWithError(String message) {
+        System.err.println(message);
+        System.exit(-1);
+    }
+
     public static void main(String ...args) {
         if (args.length != 3) {
             System.err.println("Usage: CLIENT_ID TOKEN NAMESPACE");
@@ -49,22 +54,28 @@ public class SimpleExample {
             makePerson(5, "David Bowie")
         };
 
-        for (Map person : people) {
-            try {
+        try {
+            for (Map person : people) {
                 stitch.push(
                     new StitchMessage()
                     .withAction(Action.UPSERT)
                     .withSequence(System.currentTimeMillis())
                     .withData(person));
             }
-            catch (StitchException e) {
-                System.out.println("Got error response from Stitch: " + e.getMessage() +
-                                   ((StitchException)e).getResponse().getContent());
-                System.exit(-1);
+        }
+        catch (StitchException e) {
+            exitWithError("Got error response from Stitch: " + e.getMessage() +
+                          ((StitchException)e).getResponse().getContent());
+        }
+        catch (IOException e) {
+            exitWithError(e.getMessage());
+        }
+        finally {
+            try {
+                stitch.close();
             }
             catch (IOException e) {
-                System.err.println(e.getMessage());
-                System.exit(-1);
+                exitWithError("Error closing stitch client " + e.getMessage());
             }
         }
     }
