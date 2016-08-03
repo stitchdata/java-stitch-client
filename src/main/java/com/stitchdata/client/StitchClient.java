@@ -42,10 +42,6 @@ import javax.json.JsonReader;
  *
  * <ul>
  *   <li>{@link #push(StitchMessage)} - synchronous, single message</li>
- *   <li>{@link #push(List<StitchMessage>)} - synchronous, batch of messages</li>
- *   <li>{@link #offer(StitchMessage, ResponseHandler)} - asynchronous, non-blocking</li>
- *   <li>{@link #offer(StitchMessage, ResponseHandler, long)} - asynchronous, blocking with timeout</li>
- *   <li>{@link #put(StitchMessage, ResponseHandler)} - asynchronous, blocking</li>
  * </ul>
  *
  * <p>
@@ -91,64 +87,6 @@ public interface StitchClient extends Closeable {
     }
 
     /**
-     * Attempts to queue a message for later delivery without
-     * blocking. Returns false if the message cannot
-     * be queued immediately.
-     *
-     * <p> The caller can optionally provide a {@link ResponseHandler}
-     * in order to be notified when the message delivery is completed
-     * (or has failed). After the Gate accepts the message, the
-     * StitchClient will call {@link ResponseHandler#handleOk(StitchMessage,
-     * StitchResponse)}.  If delivery fails, it will call {@link
-     * ResponseHandler#handleError(StitchMessage, Exception)}. </p>
-     *
-     * @param message the message to queue.
-     * @param responseHandler invoked after the delivery is completed or fails.
-     * @return <ul>
-     *           <li>true - if the message can be queued immediately</li>
-     *           <li>false - otherwise</li>
-     *         </ul>
-     */
-    public boolean offer(StitchMessage message, ResponseHandler responseHandler);
-
-    /**
-     * Attempts to queue a message for later delivery, with a
-     * timeout. Will return after the specified amount of time if the
-     * message cannot be queued.
-     *
-     * <p> The caller can optionally provide a {@link ResponseHandler}
-     * in order to be notified when the message delivery is completed
-     * (or has failed). After the Gate accepts the message, the
-     * StitchClient will call {@link ResponseHandler#handleOk(StitchMessage,
-     * StitchResponse)}.  If delivery fails, it will call {@link
-     * ResponseHandler#handleError(StitchMessage, Exception)}. </p>
-     *
-     * @param message the message to queue.
-     * @param responseHandler invoked after the delivery is completed or fails.
-     * @param timeoutMillis milliseconds to wait for queueing.
-     * @return <ul>
-     *           <li>true - if the message can be queued immediately</li>
-     *           <li>false - otherwise</li>
-     *         </ul>
-     * @throws InterruptedException if we were interrupted while
-     *         trying to queue the message.
-     */
-    public boolean offer(StitchMessage message, ResponseHandler responseHandler,
-                         long timeoutMillis)
-        throws InterruptedException;
-
-    /**
-     * Deliver list of messages immediately.
-     *
-     * @param messages List of messages to send.
-     * @return a {@link StitchResponse} if the push request succeeded
-     * @throws StitchException if Stitch  was unable to process the messages.
-     * @throws IOException if we had an error communicating with Stitch.
-     */
-    public StitchResponse push(List<StitchMessage> messages)
-        throws StitchException, IOException;
-
-    /**
      * Deliver message immediately.
      *
      * @param message message to send.
@@ -156,24 +94,6 @@ public interface StitchClient extends Closeable {
      * @throws StitchException if Stitch  was unable to process the message.
      * @throws IOException if we had an error communicating with Stitch.
      */
-    public StitchResponse push(StitchMessage message) throws StitchException, IOException;
-
-    /**
-     * Queue a message for delivery, blocking until we can queue it.
-     *
-     * <p> The caller can optionally provide a {@link ResponseHandler}
-     * in order to be notified when the message delivery is completed
-     * (or has failed). After the Gate accepts the message, the
-     * StitchClient will call {@link ResponseHandler#handleOk(StitchMessage,
-     * StitchResponse)}.  If delivery fails, it will call {@link
-     * ResponseHandler#handleError(StitchMessage, Exception).} </p>
-     *
-     * @param message the message to queue.
-     * @param responseHandler invoked after the delivery is completed or fails.
-     * @throws InterruptedException if we were interrupted while
-     *         trying to queue the message.
-     */
-    public void put(StitchMessage message, ResponseHandler responseHandler)
-        throws InterruptedException;
+    public void push(StitchMessage message) throws StitchException, IOException;
 
 }

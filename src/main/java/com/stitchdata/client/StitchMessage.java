@@ -15,6 +15,10 @@ public class StitchMessage {
     private long sequence;
     private Map data;
 
+    public StitchMessage() {
+
+    }
+
     public StitchMessage withAction(String action) {
         this.action = action;
         return this;

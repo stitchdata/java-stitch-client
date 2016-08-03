@@ -33,7 +33,7 @@ public class SimpleExample {
         String token = args[1];
         String namespace = args[2];
 
-        StitchClient client = new StitchClientBuilder()
+        StitchClient stitch = new StitchClientBuilder()
             .withClientId(clientId)
             .withToken(token)
             .withNamespace(namespace)
@@ -49,29 +49,23 @@ public class SimpleExample {
             makePerson(5, "David Bowie")
         };
 
-        String tableName = "people";
-        List<String> keyNames = Arrays.asList(new String[] { "id" });
-        long sequence = System.currentTimeMillis();
-
-        ArrayList<StitchMessage> messages = new ArrayList<StitchMessage>();
         for (Map person : people) {
-            messages.add(
-                new StitchMessage()
-                .withAction(Action.UPSERT)
-                .withSequence(sequence)
-                .withData(person));
-        }
-        try {
-            StitchResponse response = client.push(messages);
-            System.out.println(response);
-        }
-        catch (StitchException e) {
-            System.out.println("Got error response from Stitch: " + e.getMessage() + ((StitchException)e).getResponse().getContent());
-            System.exit(-1);
-        }
-        catch (IOException e) {
-            System.err.println(e.getMessage());
-            System.exit(-1);
+            try {
+                stitch.push(
+                    new StitchMessage()
+                    .withAction(Action.UPSERT)
+                    .withSequence(System.currentTimeMillis())
+                    .withData(person));
+            }
+            catch (StitchException e) {
+                System.out.println("Got error response from Stitch: " + e.getMessage() +
+                                   ((StitchException)e).getResponse().getContent());
+                System.exit(-1);
+            }
+            catch (IOException e) {
+                System.err.println(e.getMessage());
+                System.exit(-1);
+            }
         }
     }
 }
