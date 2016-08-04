@@ -2,12 +2,9 @@ package com.stitchdata.client.examples;
 
 import java.io.IOException;
 import com.stitchdata.client.StitchClient;
-import com.stitchdata.client.StitchClient.Field;
-import com.stitchdata.client.StitchClient.Action;
 import com.stitchdata.client.StitchClientBuilder;
 import com.stitchdata.client.StitchException;
 import com.stitchdata.client.StitchMessage;
-import com.stitchdata.client.StitchResponse;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -57,8 +54,7 @@ public class SimpleExample {
         try {
             for (Map person : people) {
                 stitch.push(
-                    new StitchMessage()
-                    .withAction(Action.UPSERT)
+                    StitchMessage.newUpsert()
                     .withSequence(System.currentTimeMillis())
                     .withData(person));
             }

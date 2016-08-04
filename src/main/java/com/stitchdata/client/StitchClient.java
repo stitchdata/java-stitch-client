@@ -36,23 +36,21 @@ import javax.json.JsonReader;
 public class StitchClient implements Flushable, Closeable {
 
     public static final String PUSH_URL
-        =  "https://pipeline-gateway.rjmetrics.com/push";
+        = "https://pipeline-gateway.rjmetrics.com/push";
 
     private static final int HTTP_CONNECT_TIMEOUT = 1000 * 60 * 2;
     private static final ContentType CONTENT_TYPE =
         ContentType.create("application/transit+json");
 
-    public static enum Action { UPSERT, SWITCH_VIEW };
-
-    public static class Field {
-        public static final String CLIENT_ID = "client_id";
-        public static final String NAMESPACE = "namespace";
-        public static final String ACTION = "action";
-        public static final String TABLE_NAME = "table_name";
-        public static final String TABLE_VERSION = "table_version";
-        public static final String KEY_NAMES = "key_names";
-        public static final String SEQUENCE = "sequence";
-        public static final String DATA = "data";
+    private static class Field {
+        static final String CLIENT_ID = "client_id";
+        static final String NAMESPACE = "namespace";
+        static final String ACTION = "action";
+        static final String TABLE_NAME = "table_name";
+        static final String TABLE_VERSION = "table_version";
+        static final String KEY_NAMES = "key_names";
+        static final String SEQUENCE = "sequence";
+        static final String DATA = "data";
     }
 
     private final int connectTimeout = HTTP_CONNECT_TIMEOUT;
@@ -117,11 +115,7 @@ public class StitchClient implements Flushable, Closeable {
     }
 
     /**
-     * This function may or may not send the record to Stitch
-     * immediately. If the client was built with a positive buffer
-     * size specified (via {@link
-     * StitchClientBuilder#withBufferSize}), this function will add
-     *
+     * Send a message to Stitch.
      */
     public void push(StitchMessage message) throws StitchException, IOException {
 
@@ -189,6 +183,9 @@ public class StitchClient implements Flushable, Closeable {
         lastFlushTime = System.currentTimeMillis();
     }
 
+    /**
+     * Close the client, flushing all outstanding records to Stitch.
+     */
     public void close() throws IOException {
         flush();
     }

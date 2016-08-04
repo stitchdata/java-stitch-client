@@ -4,8 +4,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import com.stitchdata.client.StitchClient.Action;
-
 /**
  * Use this class to build messages to send to Stitch.
  *
@@ -21,6 +19,8 @@ import com.stitchdata.client.StitchClient.Action;
  * </pre>
  */
 public class StitchMessage {
+
+    public static enum Action { UPSERT, SWITCH_VIEW };
 
     private Action action;
     private String tableName;
