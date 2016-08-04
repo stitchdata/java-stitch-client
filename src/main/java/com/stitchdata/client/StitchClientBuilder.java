@@ -63,17 +63,17 @@ import javax.json.JsonReader;
  *
  * <h3> Optionally tune buffering</h3>
  *
- * By default, every call to {@link StitchClient#push(StitchMessage)} will
- * result in an HTTP request to Stitch. You can get much better
+ * By default, every call to {@link StitchClient#push(StitchMessage)}
+ * will result in an HTTP request to Stitch. You can get much better
  * performance by allowing the client to accumulate records in its
  * internal buffer. You can do that by specifying the buffer size (up
- * to a max of 4 Mb) with {@link #withBufferSize(int)}. If you do
- * this, then a call to {@link StitchClient#push(StitchMessage)} will put
- * the message on an in-memory buffer, and flush the buffer if adding
- * the message causes it to exceed the buffer size
+ * to a max of 4 Mb) with {@link #withBufferCapacity(int)}. If you do
+ * this, then a call to {@link StitchClient#push(StitchMessage)} will
+ * put the message on an in-memory buffer, and flush the buffer if
+ * adding the message causes it to exceed the buffer size
  * limit. Additionally, we'll flush the buffer after a certain period
- * of time (controllable with {@ #withFlushIntervalMillis}) even if
- * the buffer is not full.
+ * of time (controllable with {@ #withBufferTimeLimit}) even if the
+ * buffer is not full.
  *
  * <h3>Full example</h3>
  *
@@ -91,10 +91,10 @@ import javax.json.JsonReader;
  *   .withKeyNames("order_id")
  *
  *   // Allow 1 Mb of records to accumulate in memory
- *   .withBufferSize(1000000)
+ *   .withBufferCapacity(1000000)
  *
  *   // Flush every 10 seconds
- *   .withFlushIntervalMillis(10000)
+ *   .withBufferTimeLimit(10000)
  *
  *   .build()
  * }
@@ -103,7 +103,7 @@ import javax.json.JsonReader;
 public class StitchClientBuilder {
 
     /**
-     * By Default flush time limit, see {@link #withFlushIntervalMillis}.
+     * By Default flush time limit, see {@link #withBufferTimeLimit}.
      */
     public static final int DEFAULT_FLUSH_INTERVAL_MILLIS = 60000;
 
@@ -122,8 +122,8 @@ public class StitchClientBuilder {
     private String namespace;
     private String tableName;
     private List<String> keyNames;
-    private int flushIntervalMillis = DEFAULT_FLUSH_INTERVAL_MILLIS;
-    private int bufferSize = DEFAULT_BUFFER_SIZE;
+    private int bufferTimeLimit = DEFAULT_FLUSH_INTERVAL_MILLIS;
+    private int bufferCapacity = DEFAULT_BUFFER_SIZE;
 
     /**
      * Specify your Stitch client id. This is a required setting.
@@ -221,11 +221,11 @@ public class StitchClientBuilder {
      * Set the limit for the amount of time we'll leave records in the
      * buffer.
      *
-     * @param flushIntervalMillis time limit in milliseconds
+     * @param millis time limit in milliseconds
      * @return this object
      */
-    public StitchClientBuilder withFlushIntervalMillis(int flushIntervalMillis) {
-        this.flushIntervalMillis = flushIntervalMillis;
+    public StitchClientBuilder withBufferTimeLimit(int millis) {
+        this.bufferTimeLimit = millis;
         return this;
     }
 
@@ -236,11 +236,11 @@ public class StitchClientBuilder {
      * {@link StitchClient#push(StitchMessage)} will make a request to
      * Stitch. You can increase this up to 4Mb.
      *
-     * @param bufferSize number of bytes to keep in the buffer
+     * @param bytes number of bytes to keep in the buffer
      * @return this object
      */
-    public StitchClientBuilder withBufferSize(int bufferSize) {
-        this.bufferSize = bufferSize;
+    public StitchClientBuilder withBufferCapacity(int bytes) {
+        this.bufferCapacity = bytes;
         return this;
     }
 
@@ -253,7 +253,7 @@ public class StitchClientBuilder {
         return new StitchClient(
             StitchClient.PUSH_URL, clientId, token, namespace,
             tableName, keyNames,
-            flushIntervalMillis,
-            bufferSize);
+            bufferTimeLimit,
+            bufferCapacity);
     }
 }

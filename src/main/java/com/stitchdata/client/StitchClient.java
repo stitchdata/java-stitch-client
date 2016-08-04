@@ -28,10 +28,12 @@ import javax.json.Json;
 import javax.json.JsonReader;
 
 /**
- * Client for Stitch. Callers should use {@link StitchClientBuilder}
- * to construct instances of StitchClient. This class provides one
- * function, {@link #push(StitchMessage)}, for pushing records to
- * Stitch.
+ * Client for Stitch.
+ *
+ * <p>Callers should use {@link StitchClientBuilder} to construct
+ * instances of {@link StitchClient}.</p>
+ *
+ *
  */
 public class StitchClient implements Flushable, Closeable {
 
@@ -42,17 +44,6 @@ public class StitchClient implements Flushable, Closeable {
     private static final ContentType CONTENT_TYPE =
         ContentType.create("application/transit+json");
 
-    private static class Field {
-        static final String CLIENT_ID = "client_id";
-        static final String NAMESPACE = "namespace";
-        static final String ACTION = "action";
-        static final String TABLE_NAME = "table_name";
-        static final String TABLE_VERSION = "table_version";
-        static final String KEY_NAMES = "key_names";
-        static final String SEQUENCE = "sequence";
-        static final String DATA = "data";
-    }
-
     private final int connectTimeout = HTTP_CONNECT_TIMEOUT;
     private final String stitchUrl;
     private final int clientId;
@@ -61,7 +52,7 @@ public class StitchClient implements Flushable, Closeable {
     private final String tableName;
     private final List<String> keyNames;
     private final int flushIntervalMillis;
-    private final int bufferSize;
+    private final int bufferCapacity;
     private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     private final Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, buffer);
 
@@ -80,16 +71,16 @@ public class StitchClient implements Flushable, Closeable {
     private Map messageToMap(StitchMessage message) {
         HashMap map = new HashMap();
 
-        map.put(Field.CLIENT_ID, clientId);
-        map.put(Field.NAMESPACE, namespace);
+        map.put("client_id", clientId);
+        map.put("namespace", namespace);
 
-        putWithDefault(map, Field.TABLE_NAME, message.getTableName(), tableName);
-        putWithDefault(map, Field.KEY_NAMES, message.getKeyNames(), keyNames);
+        putWithDefault(map, "table_name", message.getTableName(), tableName);
+        putWithDefault(map, "key_names", message.getKeyNames(), keyNames);
 
-        putIfNotNull(map, Field.ACTION, message.getAction());
-        putIfNotNull(map, Field.TABLE_VERSION, message.getTableVersion());
-        putIfNotNull(map, Field.SEQUENCE, message.getSequence());
-        putIfNotNull(map, Field.DATA, message.getData());
+        putIfNotNull(map, "action", message.getAction());
+        putIfNotNull(map, "table_version", message.getTableVersion());
+        putIfNotNull(map, "sequence", message.getSequence());
+        putIfNotNull(map, "data", message.getData());
 
         return map;
     }
@@ -102,7 +93,7 @@ public class StitchClient implements Flushable, Closeable {
         String tableName,
         List<String> keyNames,
         int flushIntervalMillis,
-        int bufferSize)
+        int bufferCapacity)
     {
         this.stitchUrl = stitchUrl;
         this.clientId = clientId;
@@ -111,23 +102,45 @@ public class StitchClient implements Flushable, Closeable {
         this.tableName = tableName;
         this.keyNames = keyNames;
         this.flushIntervalMillis = flushIntervalMillis;
-        this.bufferSize = bufferSize;
+        this.bufferCapacity = bufferCapacity;
     }
 
     /**
      * Send a message to Stitch.
+     *
+     * <p>If you built the StitchClient with buffering enabled (by
+     * calling {@link StitchClientBuilder#withBufferCapacity}), this
+     * method will first put the message in an in-memory buffer. Then
+     * we check to see if the buffer is full, or if too much time has
+     * passed since the last time we flushed. If so, we will deliver
+     * all outstanding messages, blocking until the delivery has
+     * complited.</p>
+     *
+     * <p>If you built the StitchClient with buffering disabled (which
+     * is the default), the message will be sent immediately and this
+     * function will block until it is delivered.</p>
+     *
+     * @throws StitchException if Stitch rejected or was unable to
+     *                         process the message
+     * @throws IOException if there was an error communicating with
+     *                     Stitch
      */
     public void push(StitchMessage message) throws StitchException, IOException {
 
         writer.write(messageToMap(message));
-        if (buffer.size() >= bufferSize ||
+        if (buffer.size() >= bufferCapacity ||
             (System.currentTimeMillis() - lastFlushTime ) >= flushIntervalMillis) {
             flush();
         }
     }
 
     /**
-     * Send any messages currently in the buffer to Stitch.
+     * Send any outstanding messages to Stitch.
+     *
+     * @throws StitchException if Stitch rejected or was unable to
+     *                         process the message
+     * @throws IOException if there was an error communicating with
+     *                     Stitch
      */
     public void flush() throws IOException {
         System.out.println(buffer.toString());
@@ -185,6 +198,11 @@ public class StitchClient implements Flushable, Closeable {
 
     /**
      * Close the client, flushing all outstanding records to Stitch.
+     *
+     * @throws StitchException if Stitch rejected or was unable to
+     *                         process the message
+     * @throws IOException if there was an error communicating with
+     *                     Stitch
      */
     public void close() throws IOException {
         flush();

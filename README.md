@@ -1,12 +1,22 @@
 Quick Start
 ===========
 
+* Have your Stitch client id, access token, and namespace handy
+* Build an instance of StitchClient
+* Build messages
+* Push messages to stitch
+* Close the client
+
+Stitch Client ID, Access Token, and Namespace
+---------------------------------------------
+
+TODO: How to get them?
+
 Building a Client
 -----------------
 
-Use StitchClientBuilder to build a stitch client. You'll
-need to set your client id, authentication token, and namespace,
-all of which are available at http://stitchdata.com.
+Use StitchClientBuilder to build a stitch client. You'll need to set
+your client id, authentication token, and namespace.
 
 ```java
 StitchClient stitch = new StitchClientBuilder()
@@ -32,6 +42,36 @@ StitchMessage message = new StitchMessage()
     .withData(data);
 ```
 
+Sending Messages
+----------------
+
+You send a message to Stitch by calling the `push` method on your
+`StitchClient` instance, and passing in a `StitchMessage`.
+
+```java
+try {
+    stitch.push(message);
+}
+catch (StitchException e) {
+    System.err.println("Error sending message to stitch: " + e.getMessage());
+}
+```
+
+Close the client
+----------------
+
+try {
+    stitch.close();
+} catch (StitchException e) {
+   System.err.println("Error closing stitch client: " + e.getMessage());
+}
+
+Guide
+=====
+
+Setting message defaults on the client
+--------------------------------------
+
 In a typical use case, several of the fields will be the same for all
 messages that you send using a single client. To make this use case
 more convenient, you can set some of those fields on the client using
@@ -54,117 +94,25 @@ StitchMessage message = new StitchMessage()
     .withData(data);
 ```
 
-Sending Messages
-----------------
+Sending Records in Batches
+--------------------------
 
-You send messages to Stitch by calling
-
-```
-try {
-    stitch.push(message);
-}
-catch (StitchException e) {
-    System.err.println("Error sending message to Stitch");
-}
-```
-
-### Synchronous Delivery
-
-`push(Map message)` sends a single record and returns a
-`StitchResponse`. It throws `StitchException` if stitch rejects the
-record. There is typically no reason to inspect the StitchResponse -- if
-`push` doesn't throw, that means Stitch accepted the record.
-
-```java
-try {
-  stitch.push(message);
-} catch (StitchException e) {
-  // Handle error...
-}
-```
-
-`push(List<Map> messages)` sends a list of records at once. Note that
-there are limitations for the number of messages and total size of
-request that Stitch will accept. If you exceed these limits, you'll
-get a `StitchException`. It's probably easier to use the asynchronous
-methods, which will ensure that the requests satisfy the limits.
-
-### Asynchronous Delivery
-
-The asynchronous methods each take a single message and put it on an
-in-memory queue, where a background thread will pick it up and deliver
-it later. All of the asynchronous methods accept an optional
-`responseHandler` argument, which the background thread will call
-after the message has been delivered, or if the delivery fails.
-
-`put(Map message, ResponseHandler responseHandler)` puts a record onto
-the queue, blocking if there is no room in the queue. `offer(Map
-message, ResponseHandler responseHandler)` is a non-blocking
-version. If the message can be queued, `offer` will queue it and
-return true immediately. If not, it will return false. `offer(Map
-message, ResponseHandler responseHandler, long timeout)` will block
-for up to the specified number of milliseconds attempting to queue the
-record.
-
-#### Creating a Response Handler
-
-```java
-ResponseHandler hander = new ResponseHandler() {
-
-    void handleOk(Map message, StitchResponse response) {
-        log.debug("Delivered a message");
-    }
-    void handleError(Map message, StitchException exception) {
-        log.error(exception, "Error sending message ");
-    }
-}
-```
-
-#### Blocking
-
-```java
-try {
-    stitch.put(message, responseHandler);
-} catch (InterruptedException e) {
-    log.warn(e, "Interrupted while queueing message");
-}
-```
-
-#### Non-Blocking
-
-```java
-boolean queued = stitch.offer(message, responseHandler);
-if (!queued) {
-    log.warn("Queue is full");
-}
-```
-
-#### With Timeout
-
-```java
-try {
-    boolean queued = stitch.offer(message, responseHandler, 10000);
-    if (!queued) {
-        log.warn("Unable to queue message within 10 seconds");
-    }
-} catch (InterruptedException e) {
-    log.warn(e, "Interrupted while queueing message");
-}
-```
-
-#### Tuning
-
-If you will be using the asynchronous delivery methods, and you want
-finer control over how frequently the background thread sends
-messages, there are several methods for adjusting those parameters:
+By default, every call to `StitchClient.push(StitchMessage)` will
+result in an HTTP request to Stitch. For high data volumes, you will
+get much better performance by allowing StitchClient to buffer your
+messages in memory and deliver them in batches. You can turn on
+buffering by calling `withBufferCapacity` on your
+`StitchClientBuilder`.
 
 ```java
 StitchClient stitch = new StitchClientBuilder()
   .withClientId(yourClientId)
   .withToken(yourToken)
   .withNamespace(yourNamespace)
-  .withMaxFlushIntervalMillis(60000) // Flush at least once a minute
-  .withMaxBytes(1000000) // Flush when we hit 1 Mb of serialized data
-  .withMaxRecords(100) // Flush when we hit 100 records
+  .withBufferCapacity(1000000)
+  .withBufferTimeLimit(
   .build();
 ```
+
+There is no value in setting a buffer capacity higher than 4Mb, since
+that is the maximum message size Stitch will accept.
