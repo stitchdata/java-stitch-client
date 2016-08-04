@@ -1,3 +1,6 @@
+Quick Start
+===========
+
 Building a Client
 -----------------
 
@@ -16,27 +19,17 @@ StitchClient stitch = new StitchClientBuilder()
 Building a Message
 ------------------
 
-Every stitch message is a map. The allowed field names are listed in
-`StitchClient.Field`:
-
-* "client_id" - Your client identifier, obtained from http://stitchdata.com
-* "namespace" - The name you gave to the integration at http://stitchdata.com
-* "action" - The action to perform. Currently the only supported action is "upsert".
-* Fields for "upsert" action:
-  * "table_name" - The name of the table to upsert records into.
-  * "key_names" - List of keys into data map that identify the record.
-  * "sequence" - Sequence number that will be used to impose ordering of updates to a single record.
-  * "data" - The record to upsert, as a map.
+You can build a Stitch message by creating a new instance of
+StitchMessage and then calling methods on it to set the properties of
+the message. For example:
 
 ```java
-Map message = new HashMap();
-message.put(Field.CLIENT_ID, 1234);
-message.put(Field.NAMESPACE, "eventlog");
-message.put(Field.ACTION, Action.UPSERT);
-message.put(Field.TABLE_NAME, "events");
-message.put(Field.KEY_NAMES, "event_id");
-message.put(Field.SEQUENCE, System.currentTimeMillis());
-message.put(Field.DATA, data);
+StitchMessage message = new StitchMessage()
+    .withAction(Action.UPSERT)
+    .withTableName("events")
+    .withKeyName("event_id")
+    .withSequence(System.currentTimeMillis())
+    .withData(data);
 ```
 
 In a typical use case, several of the fields will be the same for all
@@ -54,22 +47,26 @@ StitchClient stitch = new StitchClientBuilder()
   .withKeyNames("id")
   .build();
 
-// I can omit client id, namespace, table name, and key names
-Map message = new HashMap();
-message.put(Field.ACTION, Action.UPSERT);
-message.put(Field.SEQUENCE, System.currentTimeMillis());
-message.put(Field.DATA, data);
-stitch.push(message);
+// I can omit the table name and key names:
+StitchMessage message = new StitchMessage()
+    .withAction(Action.UPSERT)
+    .withSequence(System.currentTimeMillis())
+    .withData(data);
 ```
 
 Sending Messages
 ----------------
 
-The Stitch client provides several methods for sending message,
-including synchronous and asynchronous options. The synchronous
-options are suitable for low-frequency streams, but the asynchronous
-options will offer better performance if you are sending messages
-frequently.
+You send messages to Stitch by calling
+
+```
+try {
+    stitch.push(message);
+}
+catch (StitchException e) {
+    System.err.println("Error sending message to Stitch");
+}
+```
 
 ### Synchronous Delivery
 

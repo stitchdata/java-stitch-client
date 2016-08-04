@@ -1,54 +1,49 @@
 package com.stitchdata.client;
 
+import com.stitchdata.client.*;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
+import java.io.EOFException;
 import java.io.Flushable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import com.cognitect.transit.Writer;
+import com.cognitect.transit.TransitFactory;
+import com.cognitect.transit.Reader;
+import org.apache.http.client.fluent.Request;
+import org.apache.http.client.fluent.Response;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.entity.ContentType;
+import org.apache.http.StatusLine;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpEntity;
+
+import javax.json.Json;
+import javax.json.JsonReader;
 
 /**
- * Client for Stitch.
- *
- * <p>Callers should use {@link StitchClientBuilder} to obtain
- * instances of {@link StitchClient}.</p>
- *
- * <p> This interface provides several different methods for sending
- * messages to Stith, including synchronous and various asynchronous
- * options. </p>
- *
- * <ul>
- *   <li>{@link #push(StitchMessage)} - synchronous, single message</li>
- * </ul>
- *
- * <p>
- * The synchronous methods ({@link #push(StitchMessage)}, {@link #push(List)})
- * block until Stitch accepts the message, or throw {@link
- * StitchException} if it rejects them.
- * </p>
- *
- * <p> The asynchronous methods ({@link #offer(StitchMessage, ResponseHandler)},
- * {@link #offer(StitchMessage, ResponseHandler, long)}, {@link
- * #put(StitchMessage, ResponseHandler)} put the message on an in-memory
- * queue. The messages will be delivered by a background thread. If
- * you want to be notified when a message is delivered or if delivery
- * fails, you can pass in a {@link ResponseHandler}. If you pass in a
- * {@code null} ResponseHandler, you will not be notified after a
- * message is delivered, and failures will be silently ignored. </p>
+ * Client for Stitch. Callers should use {@link StitchClientBuilder}
+ * to construct instances of StitchClient. This class provides one
+ * function, {@link #push(StitchMessage)}, for pushing records to
+ * Stitch.
  */
-public interface StitchClient extends Closeable, Flushable {
+public class StitchClient implements Flushable, Closeable {
 
     public static final String PUSH_URL
         =  "https://pipeline-gateway.rjmetrics.com/push";
 
-    /**
-     * Allowable values for "action" field.
-     */
-    public static class Action {
-        public static final String UPSERT = "upsert";
-        public static final String SWITCH_VIEW = "switch_view";
-    }
+    private static final int HTTP_CONNECT_TIMEOUT = 1000 * 60 * 2;
+    private static final ContentType CONTENT_TYPE =
+        ContentType.create("application/transit+json");
 
-    /**
-     * Message field names.
-     */
+    public static enum Action { UPSERT, SWITCH_VIEW };
+
     public static class Field {
         public static final String CLIENT_ID = "client_id";
         public static final String NAMESPACE = "namespace";
@@ -60,14 +55,142 @@ public interface StitchClient extends Closeable, Flushable {
         public static final String DATA = "data";
     }
 
+    private final int connectTimeout = HTTP_CONNECT_TIMEOUT;
+    private final String stitchUrl;
+    private final int clientId;
+    private final String token;
+    private final String namespace;
+    private final String tableName;
+    private final List<String> keyNames;
+    private final int flushIntervalMillis;
+    private final int bufferSize;
+    private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    private final Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, buffer);
+
+    private long lastFlushTime = System.currentTimeMillis();
+
+    private static void putWithDefault(Map map, String key, Object value, Object defaultValue) {
+        map.put(key, value != null ? value : defaultValue);
+    }
+
+    private static void putIfNotNull(Map map, String key, Object value) {
+        if (value != null) {
+            map.put(key, value);
+        }
+    }
+
+    private Map messageToMap(StitchMessage message) {
+        HashMap map = new HashMap();
+
+        map.put(Field.CLIENT_ID, clientId);
+        map.put(Field.NAMESPACE, namespace);
+
+        putWithDefault(map, Field.TABLE_NAME, message.getTableName(), tableName);
+        putWithDefault(map, Field.KEY_NAMES, message.getKeyNames(), keyNames);
+
+        putIfNotNull(map, Field.ACTION, message.getAction());
+        putIfNotNull(map, Field.TABLE_VERSION, message.getTableVersion());
+        putIfNotNull(map, Field.SEQUENCE, message.getSequence());
+        putIfNotNull(map, Field.DATA, message.getData());
+
+        return map;
+    }
+
+    StitchClient(
+        String stitchUrl,
+        int clientId,
+        String token,
+        String namespace,
+        String tableName,
+        List<String> keyNames,
+        int flushIntervalMillis,
+        int bufferSize)
+    {
+        this.stitchUrl = stitchUrl;
+        this.clientId = clientId;
+        this.token = token;
+        this.namespace = namespace;
+        this.tableName = tableName;
+        this.keyNames = keyNames;
+        this.flushIntervalMillis = flushIntervalMillis;
+        this.bufferSize = bufferSize;
+    }
+
     /**
-     * Push message to Stitch. Note that the implementation may buffer messages in memory
+     * This function may or may not send the record to Stitch
+     * immediately. If the client was built with a positive buffer
+     * size specified (via {@link
+     * StitchClientBuilder#withBufferSize}), this function will add
      *
-     * @param message message to send.
-     * @return a {@link StitchResponse} if the push request succeeded.
-     * @throws StitchException if Stitch  was unable to process the message.
-     * @throws IOException if we had an error communicating with Stitch.
      */
-    public void push(StitchMessage message) throws StitchException, IOException;
+    public void push(StitchMessage message) throws StitchException, IOException {
+
+        writer.write(messageToMap(message));
+        if (buffer.size() >= bufferSize ||
+            (System.currentTimeMillis() - lastFlushTime ) >= flushIntervalMillis) {
+            flush();
+        }
+    }
+
+    /**
+     * Send any messages currently in the buffer to Stitch.
+     */
+    public void flush() throws IOException {
+        System.out.println(buffer.toString());
+        if (buffer.size() == 0) {
+            return;
+        }
+
+        ArrayList<Map> messages = new ArrayList<Map>(buffer.size());
+        ByteArrayInputStream bais = new ByteArrayInputStream(buffer.toByteArray());
+        Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
+        boolean running = true;
+        while (running) {
+            try {
+                messages.add((Map)reader.read());
+            } catch (RuntimeException e) {
+                if (e.getCause() instanceof EOFException) {
+                    running = false;
+                }
+                else {
+                    throw e;
+                }
+            }
+        }
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
+        writer.write(messages);
+        String body = baos.toString("UTF-8");
+        System.out.println(body);
+        try {
+            Request request = Request.Post(stitchUrl)
+                .connectTimeout(connectTimeout)
+                .addHeader("Authorization", "Bearer " + token)
+                .bodyString(body, CONTENT_TYPE);
+
+            HttpResponse response = request.execute().returnResponse();
+
+            StatusLine statusLine = response.getStatusLine();
+            HttpEntity entity = response.getEntity();
+            JsonReader rdr = Json.createReader(entity.getContent());
+            StitchResponse stitchResponse = new StitchResponse(
+                statusLine.getStatusCode(),
+                statusLine.getReasonPhrase(),
+                rdr.readObject());
+            if (!stitchResponse.isOk()) {
+                throw new StitchException(stitchResponse);
+            }
+        } catch (ClientProtocolException e) {
+            throw new RuntimeException(e);
+        }
+
+        buffer.reset();
+        lastFlushTime = System.currentTimeMillis();
+    }
+
+    public void close() throws IOException {
+        flush();
+    }
 
 }
