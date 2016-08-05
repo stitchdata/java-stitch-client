@@ -94,10 +94,15 @@ public class StitchClient implements Flushable, Closeable {
     private final List<String> keyNames;
     private final int flushIntervalMillis;
     private final int bufferCapacity;
-    private final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-    private final Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, buffer);
+    private int bufferSize = 0;
 
     private long lastFlushTime = System.currentTimeMillis();
+
+    private class ByteArrayWrapper {
+        byte[] bytes;
+    }
+
+    private final List<ByteArrayWrapper> buffer = new ArrayList<ByteArrayWrapper>();
 
     private static void putWithDefault(Map map, String key, Object value, Object defaultValue) {
         map.put(key, value != null ? value : defaultValue);
@@ -112,13 +117,18 @@ public class StitchClient implements Flushable, Closeable {
     private Map messageToMap(StitchMessage message) {
         HashMap map = new HashMap();
 
+        switch (message.getAction()) {
+        case UPSERT: map.put("action", "upsert"); break;
+        case SWITCH_VIEW: map.put("action", "switch_view"); break;
+        default: throw new IllegalArgumentException("Action must not be null");
+        }
+
         map.put("client_id", clientId);
         map.put("namespace", namespace);
 
         putWithDefault(map, "table_name", message.getTableName(), tableName);
         putWithDefault(map, "key_names", message.getKeyNames(), keyNames);
 
-        putIfNotNull(map, "action", message.getAction());
         putIfNotNull(map, "table_version", message.getTableVersion());
         putIfNotNull(map, "sequence", message.getSequence());
         putIfNotNull(map, "data", message.getData());
@@ -147,7 +157,7 @@ public class StitchClient implements Flushable, Closeable {
     }
 
     private boolean isBufferFull() {
-        return buffer.size() >= bufferCapacity;
+        return bufferSize >= bufferCapacity;
     }
 
     private boolean isOverdue() {
@@ -176,34 +186,16 @@ public class StitchClient implements Flushable, Closeable {
      *                     Stitch
      */
     public void push(StitchMessage message) throws StitchException, IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
         writer.write(messageToMap(message));
-        if (isFull() || isOverdue()) {
+        ByteArrayWrapper wrapper = new ByteArrayWrapper();
+        wrapper.bytes = baos.toByteArray();
+        bufferSize++;
+
+        if (isBufferFull() || isOverdue()) {
             flush();
         }
-    }
-
-    List<Map> getBufferedMessages() {
-        ArrayList<Map> messages = new ArrayList<Map>(buffer.size());
-
-        if (buffer.size() > 0) {
-            ByteArrayInputStream bais = new ByteArrayInputStream(buffer.toByteArray());
-            Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
-            boolean running = true;
-            while (running) {
-                System.out.println("Reading a record\n");
-                try {
-                    messages.add((Map)reader.read());
-                } catch (RuntimeException e) {
-                    if (e.getCause() instanceof EOFException) {
-                        running = false;
-                    }
-                    else {
-                        throw e;
-                    }
-                }
-            }
-        }
-        return messages;
     }
 
     /**
@@ -216,13 +208,22 @@ public class StitchClient implements Flushable, Closeable {
      */
     public void flush() throws IOException {
 
-        List<Map> messages = getBufferedMessages();
+        if (buffer.isEmpty()) {
+            return;
+        }
+
+        ArrayList<Map> messages = new ArrayList<Map>(buffer.size());
+        for (ByteArrayWrapper wrapper : buffer) {
+            ByteArrayInputStream bais = new ByteArrayInputStream(wrapper.bytes);
+            Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
+            messages.add((Map)reader.read());
+        }
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
         writer.write(messages);
         String body = baos.toString("UTF-8");
-        System.out.println(body);
+
         try {
             Request request = Request.Post(stitchUrl)
                 .connectTimeout(connectTimeout)
@@ -245,7 +246,8 @@ public class StitchClient implements Flushable, Closeable {
             throw new RuntimeException(e);
         }
 
-        buffer.reset();
+        buffer.clear();
+        bufferSize = 0;
         lastFlushTime = System.currentTimeMillis();
     }
 
