@@ -40,11 +40,18 @@ the message. For example:
 
 ```java
 StitchMessage message = StitchMessage.newUpsert()
+    .withTableName("my_table")
+    .withKeyNames("id")
     .withSequence(System.currentTimeMillis())
     .withData(data);
 ```
 
-"data" is a map that has the following structure:
+* Table name is the name of the table you want to load into
+* Key names is the list of primary key columns for that table
+* Sequence is any arbitrary increasing number used to determine order of updates
+* Data is the payload
+
+Data must be a map that conforms to the following rules:
 
 * All keys are strings
 * All values are one of:
@@ -54,6 +61,7 @@ StitchMessage message = StitchMessage.newUpsert()
   * Date
   * Map (with string keys and values that conform to these rules)
   * Lists (of objects that conform to these rules
+* It must have a non-null value for each of the keys you specified as "key names"
 
 Sending Messages
 ----------------
