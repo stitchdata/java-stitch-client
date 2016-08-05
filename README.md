@@ -146,4 +146,11 @@ Asynchronous Usage
 ------------------
 
 StitchClient is *not* thread-safe. Calling any of methods concurrently
-can result in lost or corrupt data.
+can result in lost or corrupt data. If your application has multiple
+threads producing data, we recommend choosing one of the following
+options:
+
+1. Use a separate StitchClient instance for each Thread.
+2. Create a dedicated Thread that owns the StitchClient, and use a
+   queue to deliver messages to that thread. Please see
+   MultiThreadedExample.java for an example.
