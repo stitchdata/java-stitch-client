@@ -154,10 +154,6 @@ public class StitchClient implements Flushable, Closeable {
         return System.currentTimeMillis() - lastFlushTime  >= flushIntervalMillis;
     }
 
-    private boolean isReady() {
-        return isBufferFull() || isOverdue();
-    }
-
     /**
      * Send a message to Stitch.
      *
@@ -181,9 +177,33 @@ public class StitchClient implements Flushable, Closeable {
      */
     public void push(StitchMessage message) throws StitchException, IOException {
         writer.write(messageToMap(message));
-        if (isReady()) {
+        if (isFull() || isOverdue()) {
             flush();
         }
+    }
+
+    List<Map> getBufferedMessages() {
+        ArrayList<Map> messages = new ArrayList<Map>(buffer.size());
+
+        if (buffer.size() > 0) {
+            ByteArrayInputStream bais = new ByteArrayInputStream(buffer.toByteArray());
+            Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
+            boolean running = true;
+            while (running) {
+                System.out.println("Reading a record\n");
+                try {
+                    messages.add((Map)reader.read());
+                } catch (RuntimeException e) {
+                    if (e.getCause() instanceof EOFException) {
+                        running = false;
+                    }
+                    else {
+                        throw e;
+                    }
+                }
+            }
+        }
+        return messages;
     }
 
     /**
@@ -195,27 +215,8 @@ public class StitchClient implements Flushable, Closeable {
      *                     Stitch
      */
     public void flush() throws IOException {
-        System.out.println(buffer.toString());
-        if (buffer.size() == 0) {
-            return;
-        }
 
-        ArrayList<Map> messages = new ArrayList<Map>(buffer.size());
-        ByteArrayInputStream bais = new ByteArrayInputStream(buffer.toByteArray());
-        Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
-        boolean running = true;
-        while (running) {
-            try {
-                messages.add((Map)reader.read());
-            } catch (RuntimeException e) {
-                if (e.getCause() instanceof EOFException) {
-                    running = false;
-                }
-                else {
-                    throw e;
-                }
-            }
-        }
+        List<Map> messages = getBufferedMessages();
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
