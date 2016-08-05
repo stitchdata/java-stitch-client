@@ -33,7 +33,13 @@ import javax.json.JsonReader;
  * <p>Callers should use {@link StitchClientBuilder} to construct
  * instances of {@link StitchClient}.</p>
  *
- *
+ * A StitchClient maintains a fixed-capacity buffer for
+ * messages. Every call to {@link StitchClient#push(StitchMessage)}
+ * adds a record to the buffer and then flushes if it is full or if
+ * too much time has passed since the last flush. Buffer parameters
+ * can be configured with {@link
+ * StitchClientBuilder#withBufferCapacity(int)} and {@link
+ * StitchClientBuilder#withBufferTimeLimit(int)}.
  */
 public class StitchClient implements Flushable, Closeable {
 
@@ -130,17 +136,17 @@ p    }
     /**
      * Send a message to Stitch.
      *
-     * <p>If you built the StitchClient with buffering enabled (by
-     * calling {@link StitchClientBuilder#withBufferCapacity}), this
-     * method will first put the message in an in-memory buffer. Then
-     * we check to see if the buffer is full, or if too much time has
+     * <p>If buffering is enable (which is true by default), this will
+     * will first put the message in an in-memory buffer. Then we
+     * check to see if the buffer is full, or if too much time has
      * passed since the last time we flushed. If so, we will deliver
      * all outstanding messages, blocking until the delivery has
      * complited.</p>
      *
-     * <p>If you built the StitchClient with buffering disabled (which
-     * is the default), the message will be sent immediately and this
-     * function will block until it is delivered.</p>
+     * <p>If you built the StitchClient with buffering disabled (by
+     * calling {@link StitchClientBuilder#withNoBuffer}), the message
+     * will be sent immediately and this function will block until it
+     * is delivered.</p>
      *
      * @throws StitchException if Stitch rejected or was unable to
      *                         process the message
