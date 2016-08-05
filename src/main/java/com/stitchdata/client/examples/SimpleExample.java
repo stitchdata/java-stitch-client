@@ -53,15 +53,14 @@ public class SimpleExample {
 
         try {
             for (Map person : people) {
-                stitch.add(
+                stitch.push(
                     StitchMessage.newUpsert()
                     .withSequence(System.currentTimeMillis())
                     .withData(person));
             }
         }
         catch (StitchException e) {
-            exitWithError("Got error response from Stitch: " + e.getMessage() +
-                          ((StitchException)e).getResponse().getContent());
+            exitWithError("Stitch error on push: " + e.getMessage());
         }
         catch (IOException e) {
             exitWithError(e.getMessage());
@@ -71,7 +70,7 @@ public class SimpleExample {
                 stitch.close();
             }
             catch (IOException e) {
-                exitWithError("Error closing stitch client " + e.getMessage());
+                exitWithError("Stitch error on close: " + e.getMessage());
             }
         }
     }

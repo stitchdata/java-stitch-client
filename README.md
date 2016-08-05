@@ -1,11 +1,15 @@
+Stitch client for Java.
+
 Quick Start
 ===========
 
-* Have your Stitch client id, access token, and namespace handy
-* Build an instance of StitchClient
-* Build messages
-* Push messages to stitch
-* Close the client
+This will get you started sending records to Stitch. You'll go through
+the following steps:
+
+1. Build a StitchClient
+2. Build messages
+3. Push messages to stitch
+4. Close the client
 
 Stitch Client ID, Access Token, and Namespace
 ---------------------------------------------
@@ -16,7 +20,8 @@ Building a Client
 -----------------
 
 Use StitchClientBuilder to build a stitch client. You'll need to set
-your client id, authentication token, and namespace.
+your client id, authentication token, and namespace. You should have
+gotten these when you set up the integration at http://stitchdata.com.
 
 ```java
 StitchClient stitch = new StitchClientBuilder()
@@ -34,13 +39,21 @@ StitchMessage and then calling methods on it to set the properties of
 the message. For example:
 
 ```java
-StitchMessage message = new StitchMessage()
-    .withAction(Action.UPSERT)
-    .withTableName("events")
-    .withKeyName("event_id")
+StitchMessage message = StitchMessage.newUpsert()
     .withSequence(System.currentTimeMillis())
     .withData(data);
 ```
+
+"data" is a map that has the following structure:
+
+* All keys are strings
+* All values are one of:
+  * Number (Long, Integer, Short, Byte, Double, Float, BigInteger, BigDecimal)
+  * String
+  * Boolean
+  * Date
+  * Map (with string keys and values that conform to these rules)
+  * Lists (of objects that conform to these rules
 
 Sending Messages
 ----------------
@@ -49,25 +62,25 @@ You send a message to Stitch by calling the `push` method on your
 `StitchClient` instance, and passing in a `StitchMessage`.
 
 ```java
-try {
-    stitch.push(message);
-}
-catch (StitchException e) {
-    System.err.println("Error sending message to stitch: " + e.getMessage());
-}
+stitch.push(message);
 ```
 
 Close the client
 ----------------
 
-try {
-    stitch.close();
-} catch (StitchException e) {
-   System.err.println("Error closing stitch client: " + e.getMessage());
-}
+StitchClient maintains a buffer of records that haven't been delivered
+to Stitch yet. It flushes that buffer when (1) you call `push()` and
+the buffer fills up, or (2) you call `flush()`, or (3) you close the
+StitchClient. It's important to close the StitchClient when you're
+done, otherwise you'll lose any messages that have been put in the
+buffer but not yet delivered.
 
-Guide
-=====
+```
+stitch.close();
+```
+
+Advanced Topics
+===============
 
 Setting message defaults on the client
 --------------------------------------
@@ -94,25 +107,35 @@ StitchMessage message = new StitchMessage()
     .withData(data);
 ```
 
-Sending Records in Batches
---------------------------
+Tuning Buffer Parameters
+------------------------
 
-By default, every call to `StitchClient.push(StitchMessage)` will
-result in an HTTP request to Stitch. For high data volumes, you will
-get much better performance by allowing StitchClient to buffer your
-messages in memory and deliver them in batches. You can turn on
-buffering by calling `withBufferCapacity` on your
-`StitchClientBuilder`.
+By default `stitchClient.push()` deliver all outstanding records to
+Stitch when either the buffer reaches 4 Mb, or more than a minute has
+passed since the last flush. If you want to send data more frequently,
+you can lower the buffer capacity or the time limit.
 
 ```java
 StitchClient stitch = new StitchClientBuilder()
   .withClientId(yourClientId)
   .withToken(yourToken)
   .withNamespace(yourNamespace)
+
+  // Flush at 1Mb
   .withBufferCapacity(1000000)
-  .withBufferTimeLimit(
+
+  // Flush after 1 minute
+  .withBufferTimeLimit(10000)
   .build();
 ```
 
-There is no value in setting a buffer capacity higher than 4Mb, since
-that is the maximum message size Stitch will accept.
+There is no value in setting a buffer capacity higher than 4 Mb, since
+that is the maximum message size Stitch will accept. If you set it to
+a value higher than that, you will use more memory, but StitchClient
+will deliver the messages in batches no larger than 4 Mb anyway.
+
+Asynchronous Usage
+------------------
+
+StitchClient is *not* thread-safe. Calling any of methods concurrently
+can result in lost or corrupt data.

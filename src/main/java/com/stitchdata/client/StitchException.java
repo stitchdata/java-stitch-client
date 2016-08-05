@@ -2,6 +2,9 @@ package com.stitchdata.client;
 
 import java.io.IOException;
 
+/**
+ * Thrown when Stitch cannot accept a message.
+ */
 public class StitchException extends IOException {
 
     private final StitchResponse response;
@@ -16,6 +19,11 @@ public class StitchException extends IOException {
         this.response = response;
     }
 
+    /**
+     * Returns the response Stitch gave.
+     *
+     * @return the response Stitch gave
+     */
     public StitchResponse getResponse() {
         return response;
     }

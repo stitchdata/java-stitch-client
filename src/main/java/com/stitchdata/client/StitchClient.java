@@ -35,11 +35,46 @@ import javax.json.JsonReader;
  *
  * A StitchClient maintains a fixed-capacity buffer for
  * messages. Every call to {@link StitchClient#push(StitchMessage)}
- * adds a record to the buffer and then flushes if it is full or if
- * too much time has passed since the last flush. Buffer parameters
- * can be configured with {@link
+ * adds a record to the buffer and then delivers any outstanding
+ * messages if the buffer is full or if too much time has passed since
+ * the last flush. You should call {@link StitchClient#close()} when
+ * you are finished sending records or you will lose any records that
+ * have been added to the buffer but not yet delivered. Buffer
+ * parameters can be configured with {@link
  * StitchClientBuilder#withBufferCapacity(int)} and {@link
  * StitchClientBuilder#withBufferTimeLimit(int)}.
+ *
+ * <pre>
+ * {@code
+ * StitchClient stitch = new StitchClientBuilder()
+ *   .withClientId(123)
+ *   .withToken("asdfasdfasdfasdasdfasdfadsfadfasdfasdfadfsasdf")
+ *   .withNamespace("event_tracking")
+ *   .withTableName("events")
+ *   .withKeyNames(thePrimaryKeyFields)
+ *   .build();
+ *
+ * try {
+ *
+ *     for (Map data : someSourceOfRecords) {
+ *         stitch.push(StitchMessage.newUpsert()
+ *             .withSequence(System.currentTimeMillis())
+ *             .withData(data));
+ *     }
+ * }
+ * catch (StitchException e) {
+ *     System.err.println("Error sending to stitch: " + e.getMessage());
+ * }
+ * finally {
+ *     try {
+ *         stitch.close();
+ *     }
+ *     catch (StitchException e) {
+ *         System.err.println("Error sending to stitch: " + e.getMessage());
+ *     }
+ * }
+ * }
+ * </pre>
  */
 public class StitchClient implements Flushable, Closeable {
 
@@ -111,27 +146,17 @@ public class StitchClient implements Flushable, Closeable {
         this.bufferCapacity = bufferCapacity;
     }
 
-    /**
-     * Indicates whether we are ready to flush due to a full buffer.
-     */
-    public boolean isBufferFull() {
+    private boolean isBufferFull() {
         return buffer.size() >= bufferCapacity;
     }
 
-    /**
-     * Indicates whether we are ready to flush due to too much time
-     * passing since the last flush.
-     */
-    public boolean isOverdue() {
+    private boolean isOverdue() {
         return System.currentTimeMillis() - lastFlushTime  >= flushIntervalMillis;
     }
 
-    /**
-     * Indicates whether we are ready to flush.
-     */
-    public boolean isReady() {
+    private boolean isReady() {
         return isBufferFull() || isOverdue();
-p    }
+    }
 
     /**
      * Send a message to Stitch.
@@ -144,9 +169,10 @@ p    }
      * complited.</p>
      *
      * <p>If you built the StitchClient with buffering disabled (by
-     * calling {@link StitchClientBuilder#withNoBuffer}), the message
-     * will be sent immediately and this function will block until it
-     * is delivered.</p>
+     * setting capacity to 0 with {@link
+     * StitchClientBuilder#withBufferCapacity}), the message will be sent
+     * immediately and this function will block until it is
+     * delivered.</p>
      *
      * @throws StitchException if Stitch rejected or was unable to
      *                         process the message

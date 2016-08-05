@@ -61,34 +61,39 @@ import javax.json.JsonReader;
  * you send through this client. If you don't set them here, you must
  * set them on the messages.
  *
+ * <pre>
+ * {@code
+ * StitchClient stitch = new StitchClientBuilder()
+ *   .withClientId(123)
+ *   .withToken("asdfasdfasdfasdfasdfasdfasdfasdfasdf")
+ *   .withNamespace("event_tracking")
+ *   .withTableName("events")
+ *   .withKeyNames("hostname", "threadId", "timestamp")
+ *   .build();
+ * }
+ * </pre>
+ *
  * <h3> Optionally tune buffering</h3>
  *
- * By default, every call to {@link StitchClient#push(StitchMessage)}
- * will result in an HTTP request to Stitch. You can get much better
- * performance by allowing the client to accumulate records in its
- * internal buffer. You can do that by specifying the buffer size (up
- * to a max of 4 Mb) with {@link #withBufferCapacity(int)}. If you do
- * this, then a call to {@link StitchClient#push(StitchMessage)} will
- * put the message on an in-memory buffer, and flush the buffer if
- * adding the message causes it to exceed the buffer size
- * limit. Additionally, we'll flush the buffer after a certain period
- * of time (controllable with {@ #withBufferTimeLimit}) even if the
- * buffer is not full.
- *
- * <h3>Full example</h3>
+ * A StitchClient maintains a fixed-capacity buffer for
+ * messages. Every call to {@link StitchClient#push(StitchMessage)}
+ * adds a record to the buffer and then delivers any outstanding
+ * messages if the buffer is full or if too much time has passed since
+ * the last flush. By default, the buffer will be flushed after 4 Mb
+ * or 1 minute. You can control the capacity of the buffer (in bytes)
+ * with {@link #withBufferCapacity(int)}, and the maximum amount of
+ * time to allow between flushes (in milliseconds) with {@link
+ * #withBufferTimeLimit(int)}. Setting buffer capacity to 0 will
+ * effectively disable buffering, forcing each call to {@link
+ * StitchClient#push(StitchMessage)} to deliver the message
+ * immediately.
  *
  * <pre>
  * {@code
  * StitchClient stitch = new StitchClientBuilder()
- *
- *   // Required
  *   .withClientId(clientId)
  *   .withToken(token)
  *   .withNamespace(namespace);
- *
- *   // Optionally provide message defaults
- *   .withTableName("order")
- *   .withKeyNames("order_id")
  *
  *   // Allow 1 Mb of records to accumulate in memory
  *   .withBufferCapacity(1000000)
@@ -103,19 +108,16 @@ import javax.json.JsonReader;
 public class StitchClientBuilder {
 
     /**
-     * By Default flush time limit, see {@link #withBufferTimeLimit}.
+     * By default, {@link StitchClient#push(StitchMessage)} will flush
+     * the buffer if it hasn't been flushed in more than a minute.
      */
     public static final int DEFAULT_FLUSH_INTERVAL_MILLIS = 60000;
 
     /**
-     * By default, each call to {@link StitchClient#push(StitchMessage)} will send to Stitch immediately without buffering.
+     * By default, {@link StitchClient#push(StitchMessage)} will flush
+     * the buffer if it has reached 4Mb.
      */
-    public static final int DEFAULT_BUFFER_SIZE = 0;
-
-    /**
-     * We can't increase the buffer size larger than 4Mb, because that's the maximum message size Stitch will accept.
-     */
-    public static final int MAX_BUFFER_SIZE = 4194304;
+    public static final int DEFAULT_BUFFER_SIZE = 4194304;
 
     private int clientId;
     private String token;

@@ -68,7 +68,7 @@ public class StitchMessage {
      * table" replication. This allows you to associate a table
      * version number with each message, and later atomically switch
      * versions of the table using a message with action {@link
-     * StitchClient.Action#SWITCH_VIEW}. This is an experimental
+     * Action#SWITCH_VIEW}. This is an experimental
      * feature and the behavior may change without notice.
      *
      * @param tableVersion the version number of the table
