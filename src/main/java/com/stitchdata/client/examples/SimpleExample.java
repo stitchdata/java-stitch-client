@@ -53,7 +53,7 @@ public class SimpleExample {
 
         try {
             for (Map person : people) {
-                stitch.push(
+                stitch.add(
                     StitchMessage.newUpsert()
                     .withSequence(System.currentTimeMillis())
                     .withData(person));

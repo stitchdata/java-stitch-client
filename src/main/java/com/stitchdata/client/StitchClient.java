@@ -106,6 +106,28 @@ public class StitchClient implements Flushable, Closeable {
     }
 
     /**
+     * Indicates whether we are ready to flush due to a full buffer.
+     */
+    public boolean isBufferFull() {
+        return buffer.size() >= bufferCapacity;
+    }
+
+    /**
+     * Indicates whether we are ready to flush due to too much time
+     * passing since the last flush.
+     */
+    public boolean isOverdue() {
+        return System.currentTimeMillis() - lastFlushTime  >= flushIntervalMillis;
+    }
+
+    /**
+     * Indicates whether we are ready to flush.
+     */
+    public boolean isReady() {
+        return isBufferFull() || isOverdue();
+p    }
+
+    /**
      * Send a message to Stitch.
      *
      * <p>If you built the StitchClient with buffering enabled (by
@@ -126,10 +148,8 @@ public class StitchClient implements Flushable, Closeable {
      *                     Stitch
      */
     public void push(StitchMessage message) throws StitchException, IOException {
-
         writer.write(messageToMap(message));
-        if (buffer.size() >= bufferCapacity ||
-            (System.currentTimeMillis() - lastFlushTime ) >= flushIntervalMillis) {
+        if (isReady()) {
             flush();
         }
     }
