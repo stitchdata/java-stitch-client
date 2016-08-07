@@ -256,6 +256,6 @@ public class StitchClientBuilder {
             StitchClient.PUSH_URL, clientId, token, namespace,
             tableName, keyNames,
             bufferTimeLimit,
-            bufferCapacity);
+            new Buffer(bufferCapacity));
     }
 }

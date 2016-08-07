@@ -1,21 +1,12 @@
 package com.stitchdata.client;
 
-import com.stitchdata.client.*;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.Flushable;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-import com.cognitect.transit.Writer;
-import com.cognitect.transit.TransitFactory;
-import com.cognitect.transit.Reader;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.client.fluent.Response;
 import org.apache.http.client.ClientProtocolException;
@@ -23,7 +14,6 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.StatusLine;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpEntity;
-
 import javax.json.Json;
 import javax.json.JsonReader;
 
@@ -78,31 +68,29 @@ import javax.json.JsonReader;
  */
 public class StitchClient implements Flushable, Closeable {
 
+    // HTTP constants
     public static final String PUSH_URL
         = "https://pipeline-gateway.rjmetrics.com/push";
-
     private static final int HTTP_CONNECT_TIMEOUT = 1000 * 60 * 2;
     private static final ContentType CONTENT_TYPE =
         ContentType.create("application/transit+json");
 
+    // HTTP properties
     private final int connectTimeout = HTTP_CONNECT_TIMEOUT;
     private final String stitchUrl;
+
+    // Client-specific message values
     private final int clientId;
     private final String token;
     private final String namespace;
     private final String tableName;
     private final List<String> keyNames;
-    private final int flushIntervalMillis;
-    private final int bufferCapacity;
-    private int bufferSize = 0;
 
+    // Buffer flush time parameters
+    private final int flushIntervalMillis;
     private long lastFlushTime = System.currentTimeMillis();
 
-    private class ByteArrayWrapper {
-        byte[] bytes;
-    }
-
-    private final List<ByteArrayWrapper> buffer = new ArrayList<ByteArrayWrapper>();
+    private final Buffer buffer;
 
     private static void putWithDefault(Map map, String key, Object value, Object defaultValue) {
         map.put(key, value != null ? value : defaultValue);
@@ -144,7 +132,7 @@ public class StitchClient implements Flushable, Closeable {
         String tableName,
         List<String> keyNames,
         int flushIntervalMillis,
-        int bufferCapacity)
+        Buffer buffer)
     {
         this.stitchUrl = stitchUrl;
         this.clientId = clientId;
@@ -153,11 +141,7 @@ public class StitchClient implements Flushable, Closeable {
         this.tableName = tableName;
         this.keyNames = keyNames;
         this.flushIntervalMillis = flushIntervalMillis;
-        this.bufferCapacity = bufferCapacity;
-    }
-
-    private boolean isBufferFull() {
-        return bufferSize >= bufferCapacity;
+        this.buffer = buffer;
     }
 
     private boolean isOverdue() {
@@ -186,14 +170,8 @@ public class StitchClient implements Flushable, Closeable {
      *                     Stitch
      */
     public void push(StitchMessage message) throws StitchException, IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
-        writer.write(messageToMap(message));
-        ByteArrayWrapper wrapper = new ByteArrayWrapper();
-        wrapper.bytes = baos.toByteArray();
-        bufferSize++;
-
-        if (isBufferFull() || isOverdue()) {
+        buffer.write(messageToMap(message));
+        if (buffer.isFull() || isOverdue()) {
             flush();
         }
     }
@@ -207,31 +185,15 @@ public class StitchClient implements Flushable, Closeable {
      *                     Stitch
      */
     public void flush() throws IOException {
-
         if (buffer.isEmpty()) {
             return;
         }
-
-        ArrayList<Map> messages = new ArrayList<Map>(buffer.size());
-        for (ByteArrayWrapper wrapper : buffer) {
-            ByteArrayInputStream bais = new ByteArrayInputStream(wrapper.bytes);
-            Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
-            messages.add((Map)reader.read());
-        }
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
-        writer.write(messages);
-        String body = baos.toString("UTF-8");
-
         try {
             Request request = Request.Post(stitchUrl)
                 .connectTimeout(connectTimeout)
                 .addHeader("Authorization", "Bearer " + token)
-                .bodyString(body, CONTENT_TYPE);
-
+                .bodyString(buffer.read(), CONTENT_TYPE);
             HttpResponse response = request.execute().returnResponse();
-
             StatusLine statusLine = response.getStatusLine();
             HttpEntity entity = response.getEntity();
             JsonReader rdr = Json.createReader(entity.getContent());
@@ -245,9 +207,7 @@ public class StitchClient implements Flushable, Closeable {
         } catch (ClientProtocolException e) {
             throw new RuntimeException(e);
         }
-
         buffer.clear();
-        bufferSize = 0;
         lastFlushTime = System.currentTimeMillis();
     }
 
@@ -262,5 +222,4 @@ public class StitchClient implements Flushable, Closeable {
     public void close() throws IOException {
         flush();
     }
-
 }
