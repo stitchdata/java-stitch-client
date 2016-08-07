@@ -1,10 +1,11 @@
 package com.stitchdata.client;
 
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Queue;
+import java.util.LinkedList;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -14,31 +15,53 @@ import com.cognitect.transit.Reader;
 
 public class Buffer {
 
-    private final int capacity;
-    private final List<ByteArrayWrapper> buffer = new ArrayList<ByteArrayWrapper>();
-    private int size;
+    static final int MAX_MESSAGE_SIZE = 4000000;
 
-    private class ByteArrayWrapper {
+    private final Queue<Entry> queue = new LinkedList<Entry>();
+    private int availableBytes = 0;
+
+    private class Entry {
         byte[] bytes;
+        private long entryTime;
     }
 
-    Buffer(int capacity) {
-        this.capacity = capacity;
-    }
-
-    public void write(Map map) {
+    public void putMessage(Map map) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
         writer.write(map);
-        ByteArrayWrapper wrapper = new ByteArrayWrapper();
-        wrapper.bytes = baos.toByteArray();
-        size += wrapper.bytes.length;
+        Entry entry = new Entry();
+        entry.bytes = baos.toByteArray();
+        entry.entryTime = System.currentTimeMillis();
+
+        if (entry.bytes.length > MAX_MESSAGE_SIZE - 2) {
+            throw new IllegalArgumentException(
+                "Can't accept a record larger than " + (MAX_MESSAGE_SIZE - 2)
+                + " bytes");
+        }
+        queue.add(entry);
+        availableBytes += entry.bytes.length;
     }
 
-    public String read() throws IOException {
-        ArrayList<Map> messages = new ArrayList<Map>(buffer.size());
-        for (ByteArrayWrapper wrapper : buffer) {
-            ByteArrayInputStream bais = new ByteArrayInputStream(wrapper.bytes);
+    public String takeBatch(int batchSizeBytes, int batchDelayMillis) throws IOException {
+
+        if (queue.isEmpty() ||
+            (availableBytes < batchSizeBytes &&
+             System.currentTimeMillis() - queue.peek().entryTime < batchDelayMillis)) {
+            return null;
+        }
+
+        ArrayList<Map> messages = new ArrayList<Map>();
+
+        // Start size at 2 to allow for opening and closing brackets
+        int size = 2;
+        while (!queue.isEmpty() &&
+               size + queue.peek().bytes.length < MAX_MESSAGE_SIZE) {
+            Entry entry = queue.remove();
+            // Add size of record plus the comma delimiter
+            size += entry.bytes.length + 1;
+            availableBytes -= entry.bytes.length;
+            Map map;
+            ByteArrayInputStream bais = new ByteArrayInputStream(entry.bytes);
             Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
             messages.add((Map)reader.read());
         }
@@ -47,18 +70,6 @@ public class Buffer {
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
         writer.write(messages);
         return baos.toString("UTF-8");
-    }
-
-    public boolean isEmpty() {
-        return size == 0;
-    }
-
-    public boolean isFull() {
-        return size >= capacity;
-    }
-
-    public void clear() {
-        buffer.clear();
     }
 
 }

@@ -87,7 +87,8 @@ public class StitchClient implements Flushable, Closeable {
     private final List<String> keyNames;
 
     // Buffer flush time parameters
-    private final int flushIntervalMillis;
+    private final int batchSizeBytes;
+    private final int batchDelayMillis;
     private long lastFlushTime = System.currentTimeMillis();
 
     private final Buffer buffer;
@@ -132,7 +133,8 @@ public class StitchClient implements Flushable, Closeable {
         String tableName,
         List<String> keyNames,
         int flushIntervalMillis,
-        Buffer buffer)
+        int batchSizeBytes,
+        int batchDelayMillis)
     {
         this.stitchUrl = stitchUrl;
         this.clientId = clientId;
@@ -140,12 +142,13 @@ public class StitchClient implements Flushable, Closeable {
         this.namespace = namespace;
         this.tableName = tableName;
         this.keyNames = keyNames;
-        this.flushIntervalMillis = flushIntervalMillis;
-        this.buffer = buffer;
+        this.batchSizeBytes = batchSizeBytes;
+        this.batchDelayMillis = batchDelayMillis;
+        this.buffer = new Buffer();
     }
 
     private boolean isOverdue() {
-        return System.currentTimeMillis() - lastFlushTime  >= flushIntervalMillis;
+        return System.currentTimeMillis() - lastFlushTime  >= batchDelayMillis;
     }
 
     /**
@@ -170,9 +173,28 @@ public class StitchClient implements Flushable, Closeable {
      *                     Stitch
      */
     public void push(StitchMessage message) throws StitchException, IOException {
-        buffer.write(messageToMap(message));
-        if (buffer.isFull() || isOverdue()) {
-            flush();
+        buffer.putMessage(messageToMap(message));
+        String batch = buffer.takeBatch(this.batchSizeBytes, this.batchDelayMillis);
+        if (batch != null) {
+            sendBatch(batch);
+        }
+    }
+
+    private void sendBatch(String batch) throws IOException {
+        Request request = Request.Post(stitchUrl)
+            .connectTimeout(connectTimeout)
+            .addHeader("Authorization", "Bearer " + token)
+            .bodyString(batch, CONTENT_TYPE);
+        HttpResponse response = request.execute().returnResponse();
+        StatusLine statusLine = response.getStatusLine();
+        HttpEntity entity = response.getEntity();
+        JsonReader rdr = Json.createReader(entity.getContent());
+        StitchResponse stitchResponse = new StitchResponse(
+            statusLine.getStatusCode(),
+            statusLine.getReasonPhrase(),
+            rdr.readObject());
+        if (!stitchResponse.isOk()) {
+            throw new StitchException(stitchResponse);
         }
     }
 
@@ -185,30 +207,13 @@ public class StitchClient implements Flushable, Closeable {
      *                     Stitch
      */
     public void flush() throws IOException {
-        if (buffer.isEmpty()) {
-            return;
-        }
-        try {
-            Request request = Request.Post(stitchUrl)
-                .connectTimeout(connectTimeout)
-                .addHeader("Authorization", "Bearer " + token)
-                .bodyString(buffer.read(), CONTENT_TYPE);
-            HttpResponse response = request.execute().returnResponse();
-            StatusLine statusLine = response.getStatusLine();
-            HttpEntity entity = response.getEntity();
-            JsonReader rdr = Json.createReader(entity.getContent());
-            StitchResponse stitchResponse = new StitchResponse(
-                statusLine.getStatusCode(),
-                statusLine.getReasonPhrase(),
-                rdr.readObject());
-            if (!stitchResponse.isOk()) {
-                throw new StitchException(stitchResponse);
+        while (true) {
+            String batch = buffer.takeBatch(0, 0);
+            if (batch == null) {
+                return;
             }
-        } catch (ClientProtocolException e) {
-            throw new RuntimeException(e);
+            sendBatch(batch);
         }
-        buffer.clear();
-        lastFlushTime = System.currentTimeMillis();
     }
 
     /**
