@@ -74,7 +74,7 @@ public class BufferTest  {
 
         System.out.println("Batch1 size is " + batch1.length());
 
-        assertTrue(batch1.length() < Buffer.MAX_MESSAGE_SIZE);
+        assertTrue(batch1.length() < Buffer.MAX_BATCH_SIZE_BYTES);
         assertTrue(batch2.length() < batch1.length());
         assertNull(batch3);
     }
@@ -82,6 +82,16 @@ public class BufferTest  {
     @Test(expected=IllegalArgumentException.class)
     public void assertCantPutRecordLargerThanMaxMessageSize() {
         buffer.putMessage(hugeRecord);
+    }
+
+    @Test
+    public void testTriggerBatchAt10kMessages() throws IOException {
+        for (int i = 0; i < 9999; i++) {
+            buffer.putMessage(tinyRecord);
+        }
+        assertNull(buffer.takeBatch(Buffer.MAX_BATCH_SIZE_BYTES, 60000));
+        buffer.putMessage(tinyRecord);
+        assertNotNull(buffer.takeBatch(Buffer.MAX_BATCH_SIZE_BYTES, 60000));
     }
 
 }

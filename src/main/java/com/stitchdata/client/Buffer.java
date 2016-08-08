@@ -15,7 +15,8 @@ import com.cognitect.transit.Reader;
 
 public class Buffer {
 
-    static final int MAX_MESSAGE_SIZE = 4000000;
+    static final int MAX_BATCH_SIZE_BYTES = 4000000;
+    static final int MAX_MESSAGES_PER_BATCH = 10000;
 
     private final Queue<Entry> queue = new LinkedList<Entry>();
     private int availableBytes = 0;
@@ -33,9 +34,9 @@ public class Buffer {
         entry.bytes = baos.toByteArray();
         entry.entryTime = System.currentTimeMillis();
 
-        if (entry.bytes.length > MAX_MESSAGE_SIZE - 2) {
+        if (entry.bytes.length > MAX_BATCH_SIZE_BYTES - 2) {
             throw new IllegalArgumentException(
-                "Can't accept a record larger than " + (MAX_MESSAGE_SIZE - 2)
+                "Can't accept a record larger than " + (MAX_BATCH_SIZE_BYTES - 2)
                 + " bytes");
         }
         queue.add(entry);
@@ -44,9 +45,16 @@ public class Buffer {
 
     public String takeBatch(int batchSizeBytes, int batchDelayMillis) throws IOException {
 
-        if (queue.isEmpty() ||
-            (availableBytes < batchSizeBytes &&
-             System.currentTimeMillis() - queue.peek().entryTime < batchDelayMillis)) {
+        if (queue.isEmpty()) {
+            return null;
+        }
+
+        boolean ready =
+            availableBytes >= batchSizeBytes ||
+            queue.size() >= MAX_MESSAGES_PER_BATCH ||
+            System.currentTimeMillis() - queue.peek().entryTime >= batchDelayMillis;
+
+        if (!ready) {
             return null;
         }
 
@@ -55,7 +63,7 @@ public class Buffer {
         // Start size at 2 to allow for opening and closing brackets
         int size = 2;
         while (!queue.isEmpty() &&
-               size + queue.peek().bytes.length < MAX_MESSAGE_SIZE) {
+               size + queue.peek().bytes.length < MAX_BATCH_SIZE_BYTES) {
             Entry entry = queue.remove();
             // Add size of record plus the comma delimiter
             size += entry.bytes.length + 1;
