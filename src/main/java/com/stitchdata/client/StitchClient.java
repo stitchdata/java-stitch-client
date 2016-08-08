@@ -23,16 +23,23 @@ import javax.json.JsonReader;
  * <p>Callers should use {@link StitchClientBuilder} to construct
  * instances of {@link StitchClient}.</p>
  *
- * A StitchClient maintains a fixed-capacity buffer for
- * messages. Every call to {@link StitchClient#push(StitchMessage)}
- * adds a record to the buffer and then delivers any outstanding
- * messages if the buffer is full or if too much time has passed since
- * the last flush. You should call {@link StitchClient#close()} when
- * you are finished sending records or you will lose any records that
- * have been added to the buffer but not yet delivered. Buffer
- * parameters can be configured with {@link
- * StitchClientBuilder#withBufferCapacity(int)} and {@link
- * StitchClientBuilder#withBufferTimeLimit(int)}.
+ * A StitchClient takes messages (instances of {@link StitchMessage})
+ * and submits them to Stitch in batches. A call to {@link
+ * StitchClient#push(StitchMessage)} adds a message to the current
+ * batch, and then either delivers the batch immediately or waits
+ * until we accumulate more messages. By default, StitchClient will
+ * send a batch when it has accumulated 4 Mb of data or when 60
+ * seconds have passed since the last batch was sent. These parameters
+ * can be configured with {@link
+ * StitchClientBuilder#withBatchSizeBytes(int)} and {@link
+ * StitchClientBuilder#withBatchDelayMillis(int)}. Setting
+ * batchSizeBytes to 0 will effectively disable batching and cause
+ * each call to {@link #push(StitchMessage)} to send the message
+ * immediatley.
+ *
+ * You should call {@link StitchClient#close()} when you are finished
+ * sending messages or you will lose any messages that have been added
+ * to the buffer but not yet delivered.
  *
  * <pre>
  * {@code
@@ -65,6 +72,10 @@ import javax.json.JsonReader;
  * }
  * }
  * </pre>
+ *
+ * Note that instanes of StitchClient are not thread-safe. Concurrent
+ * calls to {@link #push(StitchMessage)} can result in lost or corrupt
+ * data.
  */
 public class StitchClient implements Flushable, Closeable {
 
@@ -132,7 +143,6 @@ public class StitchClient implements Flushable, Closeable {
         String namespace,
         String tableName,
         List<String> keyNames,
-        int flushIntervalMillis,
         int batchSizeBytes,
         int batchDelayMillis)
     {
@@ -154,17 +164,13 @@ public class StitchClient implements Flushable, Closeable {
     /**
      * Send a message to Stitch.
      *
-     * <p>If buffering is enable (which is true by default), this will
-     * will first put the message in an in-memory buffer. Then we
-     * check to see if the buffer is full, or if too much time has
-     * passed since the last time we flushed. If so, we will deliver
-     * all outstanding messages, blocking until the delivery has
-     * complited.</p>
+     * <p>Adds the message to the current batch, sending the batch if
+     * we have accumulated enough data.</p>
      *
-     * <p>If you built the StitchClient with buffering disabled (by
-     * setting capacity to 0 with {@link
-     * StitchClientBuilder#withBufferCapacity}), the message will be sent
-     * immediately and this function will block until it is
+     * <p>If you built the StitchClient with batching disabled (by
+     * setting batchSizeBytes to 0 with {@link
+     * StitchClientBuilder#withBatchSizeBytes}), the message will be
+     * sent immediately and this function will block until it is
      * delivered.</p>
      *
      * @throws StitchException if Stitch rejected or was unable to
@@ -217,7 +223,7 @@ public class StitchClient implements Flushable, Closeable {
     }
 
     /**
-     * Close the client, flushing all outstanding records to Stitch.
+     * Close the client, flushing all outstanding messages to Stitch.
      *
      * @throws StitchException if Stitch rejected or was unable to
      *                         process the message

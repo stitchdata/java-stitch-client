@@ -11,11 +11,6 @@ the following steps:
 3. Push messages to stitch
 4. Close the client
 
-Stitch Client ID, Access Token, and Namespace
----------------------------------------------
-
-TODO: How to get them?
-
 Building a Client
 -----------------
 
@@ -76,15 +71,17 @@ stitch.push(message);
 Close the client
 ----------------
 
-StitchClient maintains a buffer of records that haven't been delivered
-to Stitch yet. It flushes that buffer when (1) you call `push()` and
-the buffer fills up, or (2) you call `flush()`, or (3) you close the
-StitchClient. It's important to close the StitchClient when you're
-done, otherwise you'll lose any messages that have been put in the
-buffer but not yet delivered.
+StitchClient submits messages in batches, so a call to `push` will
+either put the message on a pending batch and save it for later
+delivery, or deliver the batch now.  It's important to close the
+StitchClient when you're done, otherwise you'll lose any messages that
+are in a pending batch.
 
 ```
-stitch.close();
+...
+finally {
+    stitch.close();
+}
 ```
 
 Advanced Topics
@@ -118,10 +115,10 @@ StitchMessage message = new StitchMessage()
 Tuning Buffer Parameters
 ------------------------
 
-By default `stitchClient.push()` deliver all outstanding records to
-Stitch when either the buffer reaches 4 Mb, or more than a minute has
-passed since the last flush. If you want to send data more frequently,
-you can lower the buffer capacity or the time limit.
+By default `stitchClient.push()` deliver a batch of records to Stitch
+when it reaches 4 Mb, or more than a minute has passed since the last
+batch. If you want to send data more frequently, you can lower the
+buffer capacity or the time limit.
 
 ```java
 StitchClient stitch = new StitchClientBuilder()
@@ -130,12 +127,18 @@ StitchClient stitch = new StitchClientBuilder()
   .withNamespace(yourNamespace)
 
   // Flush at 1Mb
-  .withBufferCapacity(1000000)
+  .withBatchSize(1000000)
 
   // Flush after 1 minute
-  .withBufferTimeLimit(10000)
+  .withBatchDelayMillis(10000)
   .build();
 ```
+
+Setting the batch size to 0 bytes will effectively turn off batching
+and force `push` to send a batch of one record with every call. This
+is not generally recommended, as batching will give better
+performance, but can be useful for low-volume streams or for
+debugging.
 
 There is no value in setting a buffer capacity higher than 4 Mb, since
 that is the maximum message size Stitch will accept. If you set it to
@@ -152,5 +155,4 @@ options:
 
 1. Use a separate StitchClient instance for each Thread.
 2. Create a dedicated Thread that owns the StitchClient, and use a
-   queue to deliver messages to that thread. Please see
-   MultiThreadedExample.java for an example.
+   queue to deliver messages to that thread.

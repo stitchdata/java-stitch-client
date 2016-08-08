@@ -17,7 +17,6 @@ public class BufferTest  {
 
     private Buffer buffer = null;
 
-
     @BeforeClass
     public static void initTestRecords() {
         tinyRecord.put("a", "b");

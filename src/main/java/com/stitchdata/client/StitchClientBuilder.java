@@ -73,20 +73,21 @@ import javax.json.JsonReader;
  * }
  * </pre>
  *
- * <h3> Optionally tune buffering</h3>
+ * <h3> Optionally tune batch parameters</h3>
  *
- * A StitchClient maintains a fixed-capacity buffer for
- * messages. Every call to {@link StitchClient#push(StitchMessage)}
- * adds a record to the buffer and then delivers any outstanding
- * messages if the buffer is full or if too much time has passed since
- * the last flush. By default, the buffer will be flushed after 4 Mb
- * or 1 minute. You can control the capacity of the buffer (in bytes)
- * with {@link #withBufferCapacity(int)}, and the maximum amount of
- * time to allow between flushes (in milliseconds) with {@link
- * #withBufferTimeLimit(int)}. Setting buffer capacity to 0 will
- * effectively disable buffering, forcing each call to {@link
- * StitchClient#push(StitchMessage)} to deliver the message
- * immediately.
+ * A StitchClient takes records (instances of {@link StitchMessage})
+ * and submits them to Stitch in batches. A call to {@link
+ * StitchClient#push(StitchMessage)} adds a record to the current
+ * batch, and then either delivers the batch immediately or waits
+ * until we accumulate more records. By default, StitchClient will
+ * send a batch when it has accumulated 4 Mb of data or when 60
+ * seconds have passed since the last batch was sent. These parameters
+ * can be configured with {@link
+ * StitchClientBuilder#withBatchSizeBytes(int)} and {@link
+ * StitchClientBuilder#withBatchDelayMillis(int)}. Setting
+ * batchSizeBytes to 0 will effectively disable batching and cause
+ * each call to {@link #StitchClient.push(StitchMessage)} to send the record
+ * immediatley.
  *
  * <pre>
  * {@code
@@ -96,10 +97,10 @@ import javax.json.JsonReader;
  *   .withNamespace(namespace);
  *
  *   // Allow 1 Mb of records to accumulate in memory
- *   .withBufferCapacity(1000000)
+ *   .withBatchSizeBytes(1000000)
  *
  *   // Flush every 10 seconds
- *   .withBufferTimeLimit(10000)
+ *   .withBatchDelayMillis(10000)
  *
  *   .build()
  * }
@@ -108,24 +109,24 @@ import javax.json.JsonReader;
 public class StitchClientBuilder {
 
     /**
-     * By default, {@link StitchClient#push(StitchMessage)} will flush
-     * the buffer if it hasn't been flushed in more than a minute.
+     * By default, {@link StitchClient#push(StitchMessage)} will send
+     * a batch if it hasn't sent a batch in more than a minute.
      */
-    public static final int DEFAULT_FLUSH_INTERVAL_MILLIS = 60000;
+    public static final int DEFAULT_BATCH_DELAY_MILLIS = 60000;
 
     /**
-     * By default, {@link StitchClient#push(StitchMessage)} will flush
-     * the buffer if it has reached 4Mb.
+     * By default, {@link StitchClient#push(StitchMessage)} will send
+     * a batch if it has reached 4 Mb.
      */
-    public static final int DEFAULT_BUFFER_SIZE = 4194304;
+    public static final int DEFAULT_BATCH_SIZE_BYTES = 4194304;
 
     private int clientId;
     private String token;
     private String namespace;
     private String tableName;
     private List<String> keyNames;
-    private int bufferTimeLimit = DEFAULT_FLUSH_INTERVAL_MILLIS;
-    private int bufferCapacity = DEFAULT_BUFFER_SIZE;
+    private int batchSizeBytes = DEFAULT_BATCH_SIZE_BYTES;
+    private int batchDelayMillis = DEFAULT_BATCH_DELAY_MILLIS;
 
     /**
      * Specify your Stitch client id. This is a required setting.
@@ -221,28 +222,28 @@ public class StitchClientBuilder {
 
     /**
      * Set the limit for the amount of time we'll leave records in the
-     * buffer.
+     * batch without sending.
      *
      * @param millis time limit in milliseconds
      * @return this object
      */
-    public StitchClientBuilder withBufferTimeLimit(int millis) {
-        this.bufferTimeLimit = millis;
+    public StitchClientBuilder withBatchDelayMillis(int millis) {
+        this.batchDelayMillis = millis;
         return this;
     }
 
     /**
-     * Set the maximum number of bytes we'll accumulate in the buffer
-     * before sending a batch of messages to Stitch. When set to 0
-     * (the default), we will not buffer messages; every call to
-     * {@link StitchClient#push(StitchMessage)} will make a request to
+     * Set the maximum number of bytes we'll accumulate before sending
+     * a batch of messages to Stitch. When set to 0, we will not
+     * buffer messages; every call to {@link
+     * StitchClient#push(StitchMessage)} will make a request to
      * Stitch. You can increase this up to 4Mb.
      *
      * @param bytes number of bytes to keep in the buffer
      * @return this object
      */
-    public StitchClientBuilder withBufferCapacity(int bytes) {
-        this.bufferCapacity = bytes;
+    public StitchClientBuilder withBatchSizeBytes(int bytes) {
+        this.batchSizeBytes = bytes;
         return this;
     }
 
@@ -255,7 +256,7 @@ public class StitchClientBuilder {
         return new StitchClient(
             StitchClient.PUSH_URL, clientId, token, namespace,
             tableName, keyNames,
-            bufferTimeLimit,
-            new Buffer(bufferCapacity));
+            batchSizeBytes,
+            batchDelayMillis);
     }
 }
