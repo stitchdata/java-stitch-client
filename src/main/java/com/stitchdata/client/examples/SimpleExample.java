@@ -35,13 +35,7 @@ public class SimpleExample {
         String token = args[1];
         String namespace = args[2];
 
-        StitchClient stitch = new StitchClientBuilder()
-            .withClientId(clientId)
-            .withToken(token)
-            .withNamespace(namespace)
-            .withTableName("people")
-            .withKeyNames("id")
-            .build();
+
 
         Map[] people = new Map[] {
             makePerson(1, "Jerry Garcia"),
@@ -51,7 +45,13 @@ public class SimpleExample {
             makePerson(5, "David Bowie")
         };
 
-        try {
+        try (StitchClient stitch = new StitchClientBuilder()
+             .withClientId(clientId)
+             .withToken(token)
+             .withNamespace(namespace)
+             .withTableName("people")
+             .withKeyNames("id")
+             .build()) {
             for (Map person : people) {
                 stitch.push(
                     StitchMessage.newUpsert()
@@ -60,18 +60,10 @@ public class SimpleExample {
             }
         }
         catch (StitchException e) {
-            exitWithError("Stitch error on push: " + e.getMessage());
+            exitWithError("Stitch error " + e.getMessage());
         }
         catch (IOException e) {
             exitWithError(e.getMessage());
-        }
-        finally {
-            try {
-                stitch.close();
-            }
-            catch (IOException e) {
-                exitWithError("Stitch error on close: " + e.getMessage());
-            }
         }
     }
 }

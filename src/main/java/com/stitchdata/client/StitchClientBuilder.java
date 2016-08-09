@@ -86,23 +86,26 @@ import javax.json.JsonReader;
  * StitchClientBuilder#withBatchSizeBytes(int)} and {@link
  * StitchClientBuilder#withBatchDelayMillis(int)}. Setting
  * batchSizeBytes to 0 will effectively disable batching and cause
- * each call to {@link #StitchClient.push(StitchMessage)} to send the record
- * immediatley.
+ * each call to {@link #StitchClient.push(StitchMessage)} to send the
+ * record immediatley.
  *
  * <pre>
  * {@code
- * StitchClient stitch = new StitchClientBuilder()
- *   .withClientId(clientId)
- *   .withToken(token)
- *   .withNamespace(namespace);
+ * try (StitchClient stitch = new StitchClientBuilder()
+ *     .withClientId(clientId)
+ *     .withToken(token)
+ *     .withNamespace(namespace);
  *
- *   // Allow 1 Mb of records to accumulate in memory
- *   .withBatchSizeBytes(1000000)
+ *     // Allow 1 Mb of records to accumulate in memory
+ *     .withBatchSizeBytes(1000000)
  *
- *   // Flush every 10 seconds
- *   .withBatchDelayMillis(10000)
+ *     // Flush every 10 seconds
+ *     .withBatchDelayMillis(10000)
  *
- *   .build()
+ *     .build())
+ * {
+ *     // ...
+ * }
  * }
  * </pre>
  */

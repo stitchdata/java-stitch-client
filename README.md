@@ -9,21 +9,27 @@ the following steps:
 1. Build a StitchClient
 2. Build messages
 3. Push messages to stitch
-4. Close the client
 
 Building a Client
 -----------------
 
 Use StitchClientBuilder to build a stitch client. You'll need to set
 your client id, authentication token, and namespace. You should have
-gotten these when you set up the integration at http://stitchdata.com.
+gotten these when you set up the integration at
+http://stitchdata.com. You should close the client when you're done
+with it to ensure that all messages are delivered, so we recommend
+opening it in a try-with-resources statement.
 
 ```java
-StitchClient stitch = new StitchClientBuilder()
+try (StitchClient stitch = new StitchClientBuilder()
   .withClientId(yourClientId)
   .withToken(yourToken)
   .withNamespace(yourNamespace)
   .build();
+  )
+{
+  // ...
+}
 ```
 
 Building a Message
@@ -68,21 +74,7 @@ You send a message to Stitch by calling the `push` method on your
 stitch.push(message);
 ```
 
-Close the client
-----------------
-
-StitchClient submits messages in batches, so a call to `push` will
-either put the message on a pending batch and save it for later
-delivery, or deliver the batch now.  It's important to close the
-StitchClient when you're done, otherwise you'll lose any messages that
-are in a pending batch.
-
-```
-...
-finally {
-    stitch.close();
-}
-```
+Please see SimpleExample.java for a full working example.
 
 Advanced Topics
 ===============
@@ -115,10 +107,16 @@ StitchMessage message = new StitchMessage()
 Tuning Buffer Parameters
 ------------------------
 
-By default `stitchClient.push()` deliver a batch of records to Stitch
-when it reaches 4 Mb, or more than a minute has passed since the last
-batch. If you want to send data more frequently, you can lower the
-buffer capacity or the time limit.
+By default `stitchClient.push()` will accumulate messages locally in a
+batch, and then deliver the batch when one of the following conditions
+is met:
+
+* The batch has 4 Mb of data
+* The batch has 10,000 records
+* A minute has passed since the last batch was sent.
+
+If you want to send data more frequently, you can lower the buffer
+capacity or the time limit.
 
 ```java
 StitchClient stitch = new StitchClientBuilder()
@@ -150,9 +148,5 @@ Asynchronous Usage
 
 StitchClient is *not* thread-safe. Calling any of methods concurrently
 can result in lost or corrupt data. If your application has multiple
-threads producing data, we recommend choosing one of the following
-options:
-
-1. Use a separate StitchClient instance for each Thread.
-2. Create a dedicated Thread that owns the StitchClient, and use a
-   queue to deliver messages to that thread.
+threads producing data, we recommend using a separate client for each
+thread.

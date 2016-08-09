@@ -37,22 +37,20 @@ import javax.json.JsonReader;
  * each call to {@link #push(StitchMessage)} to send the message
  * immediatley.
  *
- * You should call {@link StitchClient#close()} when you are finished
- * sending messages or you will lose any messages that have been added
- * to the buffer but not yet delivered.
+ * You should open the client in a try-with-resources statement to
+ * ensure that it is closed, otherwise you will lose any messages that
+ * have been added to the buffer but not yet delivered.
  *
  * <pre>
  * {@code
- * StitchClient stitch = new StitchClientBuilder()
+ * try (StitchClient stitch = new StitchClientBuilder()
  *   .withClientId(123)
  *   .withToken("asdfasdfasdfasdasdfasdfadsfadfasdfasdfadfsasdf")
  *   .withNamespace("event_tracking")
  *   .withTableName("events")
  *   .withKeyNames(thePrimaryKeyFields)
- *   .build();
- *
- * try {
- *
+ *   .build())
+ * {
  *     for (Map data : someSourceOfRecords) {
  *         stitch.push(StitchMessage.newUpsert()
  *             .withSequence(System.currentTimeMillis())
@@ -61,14 +59,6 @@ import javax.json.JsonReader;
  * }
  * catch (StitchException e) {
  *     System.err.println("Error sending to stitch: " + e.getMessage());
- * }
- * finally {
- *     try {
- *         stitch.close();
- *     }
- *     catch (StitchException e) {
- *         System.err.println("Error sending to stitch: " + e.getMessage());
- *     }
  * }
  * }
  * </pre>
