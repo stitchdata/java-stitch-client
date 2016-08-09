@@ -5,11 +5,8 @@ import com.stitchdata.client.StitchClient;
 import com.stitchdata.client.StitchClientBuilder;
 import com.stitchdata.client.StitchException;
 import com.stitchdata.client.StitchMessage;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.ArrayList;
 
 public class SimpleExample {
 
@@ -34,8 +31,6 @@ public class SimpleExample {
         Integer clientId = Integer.parseInt(args[0]);
         String token = args[1];
         String namespace = args[2];
-
-
 
         Map[] people = new Map[] {
             makePerson(1, "Jerry Garcia"),

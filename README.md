@@ -60,7 +60,7 @@ Data must be a map that conforms to the following rules:
   * Boolean
   * Date
   * Map (with string keys and values that conform to these rules)
-  * Lists (of objects that conform to these rules
+  * Lists (of objects that conform to these rules)
 * It must have a non-null value for each of the keys you specified as "key names"
 
 Sending Messages
@@ -89,12 +89,12 @@ those fields into every message it sends.
 
 ```java
 StitchClient stitch = new StitchClientBuilder()
-  .withClientId(yourClientId)
-  .withToken(yourToken)
-  .withNamespace(yourNamespace)
-  .withTableName("events")
-  .withKeyNames("id")
-  .build();
+    .withClientId(yourClientId)
+    .withToken(yourToken)
+    .withNamespace(yourNamespace)
+    .withTableName("events")
+    .withKeyNames("id")
+    .build();
 
 // I can omit the table name and key names:
 StitchMessage message = new StitchMessage()
@@ -119,15 +119,15 @@ capacity or the time limit.
 
 ```java
 StitchClient stitch = new StitchClientBuilder()
-  .withClientId(yourClientId)
-  .withToken(yourToken)
-  .withNamespace(yourNamespace)
+    .withClientId(yourClientId)
+    .withToken(yourToken)
+    .withNamespace(yourNamespace)
 
-  // Flush at 1Mb
-  .withBatchSize(1000000)
+    // Flush at 1Mb
+    .withBatchSize(1000000)
 
-  // Flush after 1 minute
-  .withBatchDelayMillis(10000)
+    // Flush after 1 minute
+    .withBatchDelayMillis(10000)
   .build();
 ```
 
