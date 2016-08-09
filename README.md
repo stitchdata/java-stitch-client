@@ -3,19 +3,17 @@ Stitch client for Java.
 Quick Start
 ===========
 
-This will get you started sending records to Stitch. You'll go through
-the following steps:
-
-1. Build a StitchClient
-2. Build messages
-3. Push messages to stitch
+This will get you started sending records to Stitch.
 
 Building a Client
 -----------------
 
-Use StitchClientBuilder to build a stitch client. You'll need to set
-your client id, authentication token, and namespace. You should have
-gotten these when you set up the integration at
+Use
+[StitchClientBuilder](src/main/java/com/stitchdata/client/StitchClientBuilder.java)
+to build a
+[StitchClient](src/main/java/com/stitchdata/client/StitchClient.java). You'll
+need to set your client id, authentication token, and namespace. You
+should have gotten these when you set up the integration at
 http://stitchdata.com. You should close the client when you're done
 with it to ensure that all messages are delivered, so we recommend
 opening it in a try-with-resources statement.
@@ -35,8 +33,9 @@ Building a Message
 ------------------
 
 You can build a Stitch message by creating a new instance of
-StitchMessage and then calling methods on it to set the properties of
-the message. For example:
+[StitchMessage](src/main/java/com/stitchdata/client/StitchMessage.java)
+and then calling methods on it to set the properties of the
+message. For example:
 
 ```java
 StitchMessage message = StitchMessage.newUpsert()
@@ -73,7 +72,7 @@ You send a message to Stitch by calling the `push` method on your
 stitch.push(message);
 ```
 
-Please see SimpleExample.java for a full working example.
+Please see [SimpleExample.java](src/main/java/com/stitchdata/client/SimpleExample.java) for a full working example.
 
 Advanced Topics
 ===============
