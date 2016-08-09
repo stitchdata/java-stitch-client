@@ -1,12 +1,12 @@
-Stitch client for Java.
+Java Stitch Client
+==================
 
 Quick Start
-===========
+-----------
 
 This will get you started sending records to Stitch.
 
-Building a Client
------------------
+### Building a Client
 
 Use
 [StitchClientBuilder](src/main/java/com/stitchdata/client/StitchClientBuilder.java)
@@ -29,8 +29,7 @@ try (StitchClient stitch = new StitchClientBuilder()
 }
 ```
 
-Building a Message
-------------------
+### Building a Message
 
 You can build a Stitch message by creating a new instance of
 [StitchMessage](src/main/java/com/stitchdata/client/StitchMessage.java)
@@ -62,8 +61,7 @@ Data must be a map that conforms to the following rules:
   * Lists (of objects that conform to these rules)
 * It must have a non-null value for each of the keys you specified as "key names"
 
-Sending Messages
-----------------
+### Sending Messages
 
 You send a message to Stitch by calling the `push` method on your
 `StitchClient` instance, and passing in a `StitchMessage`.
@@ -72,13 +70,27 @@ You send a message to Stitch by calling the `push` method on your
 stitch.push(message);
 ```
 
-Please see [SimpleExample.java](src/main/java/com/stitchdata/client/SimpleExample.java) for a full working example.
+Running the Example Program
+---------------------------
+
+Please see
+[SimpleExample.java](src/main/java/com/stitchdata/client/SimpleExample.java)
+for a full working example. You can run this program with your own
+credentials by executing this command (replacing CLIENT_ID, TOKEN, and
+NAMESPACE with your own values):
+
+```bash
+mvn exec:java -Dexec.mainClass=com.stitchdata.client.examples.SimpleExample -Dexec.args="CLIENT_ID TOKEN NAMESPACE"
+```
+
+On a successful run, you'll see a "BUILD SUCCESSFUL" message. You
+should then wait a few minutes and check your data warehouse, and you
+should see the example records.
 
 Advanced Topics
-===============
+---------------
 
-Setting message defaults on the client
---------------------------------------
+### Setting message defaults on the client
 
 In a typical use case, several of the fields will be the same for all
 messages that you send using a single client. To make this use case
@@ -102,8 +114,7 @@ StitchMessage message = new StitchMessage()
     .withData(data);
 ```
 
-Tuning Buffer Parameters
-------------------------
+### Tuning Buffer Parameters
 
 By default `stitchClient.push()` will accumulate messages locally in a
 batch, and then deliver the batch when one of the following conditions
@@ -148,3 +159,10 @@ StitchClient is *not* thread-safe. Calling any of methods concurrently
 can result in lost or corrupt data. If your application has multiple
 threads producing data, we recommend using a separate client for each
 thread.
+
+License
+-------
+
+Copyright © 2016 Stitch
+
+Distributed under the Apache License Version 2.0
