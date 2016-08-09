@@ -25,8 +25,7 @@ try (StitchClient stitch = new StitchClientBuilder()
   .withClientId(yourClientId)
   .withToken(yourToken)
   .withNamespace(yourNamespace)
-  .build();
-  )
+  .build())
 {
   // ...
 }
