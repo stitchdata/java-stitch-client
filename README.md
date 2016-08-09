@@ -22,10 +22,10 @@ opening it in a try-with-resources statement.
 
 ```java
 try (StitchClient stitch = new StitchClientBuilder()
-  .withClientId(yourClientId)
-  .withToken(yourToken)
-  .withNamespace(yourNamespace)
-  .build())
+     .withClientId(yourClientId)
+     .withToken(yourToken)
+     .withNamespace(yourNamespace)
+     .build())
 {
   // ...
 }
