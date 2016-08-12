@@ -6,7 +6,6 @@
   <artifactId>java-stitch-client</artifactId>
   <version>0.2.1-SNAPSHOT</version>
   <url>https://github.com/stitchdata/java-stitch-client</url>
-  <packaging>jar</packaging>
   <scm>
     <url>https://github.com/stitchdata/java-stitch-client</url>
     <connection>scm:git:git://github.com/stitchdata/java-stitch-client.git</connection>
