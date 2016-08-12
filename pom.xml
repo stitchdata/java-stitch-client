@@ -8,7 +8,7 @@
   <url>https://github.com/stitchdata/java-stitch-client</url>
   <scm>
     <url>https://github.com/stitchdata/java-stitch-client</url>
-    <connection>scm:git:git://github.com/stitchdata/java-stitch-client.git</connection>
+    <connection>scm:git:git@github.com/stitchdata/java-stitch-client.git</connection>
     <tag>java-stitch-client-0.2.1</tag>
   </scm>
 
