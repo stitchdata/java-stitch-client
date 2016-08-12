@@ -14,8 +14,8 @@
   <developers>
     <developer>
       <id>miked@stitchdata.com</id>
-      <name>Mike DeLaurentis</id>
-      <email>miked@stitchdata.com</id>
+      <name>Mike DeLaurentis</name>
+      <email>miked@stitchdata.com</email>
       <organization>Stitch</organization>
       <organizationUrl>http://stitchdata.com</organizationUrl>
     </developer>
