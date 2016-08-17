@@ -63,9 +63,16 @@ import javax.json.JsonReader;
  * }
  * </pre>
  *
- * Note that instanes of StitchClient are not thread-safe. Concurrent
- * calls to {@link #push(StitchMessage)} can result in lost or corrupt
- * data.
+ * Instances of StitchClient are thread-safe. If buffering is enabled
+ * (which it is by default), then multiple threads will accumulate
+ * records into the same batch. When one of those threads makes a call
+ * to {@link #push(StitchMessage)} that causes the buffer to fill up,
+ * that thread will deliver the entire batch to Stitch. This behavior
+ * should be suitable for many applications. However, if you do not
+ * want records from multiple threads to be sent on the same batch, or
+ * if you want to ensure that a record is only delivered by the thread
+ * that produced it, then you can create a separate StitchClient for
+ * each thread.
  */
 public class StitchClient implements Flushable, Closeable {
 
