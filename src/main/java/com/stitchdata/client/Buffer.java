@@ -25,7 +25,7 @@ public class Buffer {
         byte[] bytes;
         private long entryTime;
 
-        private Entry(Map map) throws IOException {
+        private Entry(Map map) {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
             writer.write(map);
