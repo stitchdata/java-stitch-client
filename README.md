@@ -155,10 +155,15 @@ will deliver the messages in batches no larger than 4 Mb anyway.
 Asynchronous Usage
 ------------------
 
-StitchClient is *not* thread-safe. Calling any of methods concurrently
-can result in lost or corrupt data. If your application has multiple
-threads producing data, we recommend using a separate client for each
-thread.
+It is safe for multiple threads to call `push` on a single instance of
+`StitchClient`. If buffering is enabled (which it is by default), then
+multiple threads will accumulate records into the same batch. When one
+of those threads makes a call to `push` that causes the buffer to fill
+up, that thread will deliver the entire batch to Stitch. This behavior
+should be suitable for many applications. However, if you do not want
+records from multiple threads to be sent on the same batch, or if you
+want to ensure that a record is only delivered by the thread that
+produced it, then you can create a separate StitchClient for each thread.
 
 License
 -------
