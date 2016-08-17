@@ -21,24 +21,28 @@ public class Buffer {
     private final Queue<Entry> queue = new LinkedList<Entry>();
     private int availableBytes = 0;
 
-    private class Entry {
+    private static class Entry {
         byte[] bytes;
         private long entryTime;
+
+        private Entry(Map map) throws IOException {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
+            writer.write(map);
+
+            bytes = baos.toByteArray();
+            entryTime = System.currentTimeMillis();
+
+            if (bytes.length > MAX_BATCH_SIZE_BYTES - 2) {
+                throw new IllegalArgumentException(
+                    "Can't accept a record larger than " + (MAX_BATCH_SIZE_BYTES - 2)
+                    + " bytes");
+            }
+        }
     }
 
     public void putMessage(Map map) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
-        writer.write(map);
-        Entry entry = new Entry();
-        entry.bytes = baos.toByteArray();
-        entry.entryTime = System.currentTimeMillis();
-
-        if (entry.bytes.length > MAX_BATCH_SIZE_BYTES - 2) {
-            throw new IllegalArgumentException(
-                "Can't accept a record larger than " + (MAX_BATCH_SIZE_BYTES - 2)
-                + " bytes");
-        }
+        Entry entry = new Entry(map);
         queue.add(entry);
         availableBytes += entry.bytes.length;
     }
