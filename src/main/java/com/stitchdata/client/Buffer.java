@@ -41,10 +41,13 @@ public class Buffer {
         }
     }
 
-    public void putMessage(Map map) {
-        Entry entry = new Entry(map);
+    private synchronized void putEntry(Entry entry) {
         queue.add(entry);
         availableBytes += entry.bytes.length;
+    }
+
+    public void putMessage(Map map) {
+        putEntry(new Entry(map));
     }
 
     public String takeBatch(int batchSizeBytes, int batchDelayMillis) throws IOException {
