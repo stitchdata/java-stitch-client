@@ -147,10 +147,6 @@ public class StitchClient implements Flushable, Closeable {
         this.buffer = new Buffer();
     }
 
-    private boolean isOverdue() {
-        return System.currentTimeMillis() - lastFlushTime  >= batchDelayMillis;
-    }
-
     /**
      * Send a message to Stitch.
      *
