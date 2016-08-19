@@ -3,11 +3,11 @@ package com.stitchdata.client;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.Queue;
 import java.util.LinkedList;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.UnsupportedEncodingException;
 import java.io.IOException;
 import com.cognitect.transit.Writer;
 import com.cognitect.transit.TransitFactory;
@@ -21,30 +21,15 @@ public class Buffer {
     private final Queue<Entry> queue = new LinkedList<Entry>();
     private int availableBytes = 0;
 
-    private class Entry {
-        byte[] bytes;
-        private long entryTime;
-    }
+    // Synchronized methods for accessing the properties (queue and
+    // availableBytes)
 
-    public void putMessage(Map map) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
-        writer.write(map);
-        Entry entry = new Entry();
-        entry.bytes = baos.toByteArray();
-        entry.entryTime = System.currentTimeMillis();
-
-        if (entry.bytes.length > MAX_BATCH_SIZE_BYTES - 2) {
-            throw new IllegalArgumentException(
-                "Can't accept a record larger than " + (MAX_BATCH_SIZE_BYTES - 2)
-                + " bytes");
-        }
+    private synchronized void putEntry(Entry entry) {
         queue.add(entry);
         availableBytes += entry.bytes.length;
     }
 
-    public String takeBatch(int batchSizeBytes, int batchDelayMillis) throws IOException {
-
+    private synchronized List<Entry> takeEntries(int batchSizeBytes, int batchDelayMillis) {
         if (queue.isEmpty()) {
             return null;
         }
@@ -58,7 +43,7 @@ public class Buffer {
             return null;
         }
 
-        ArrayList<Map> messages = new ArrayList<Map>();
+        ArrayList<Entry> entries = new ArrayList<Entry>();
 
         // Start size at 2 to allow for opening and closing brackets
         int size = 2;
@@ -68,7 +53,44 @@ public class Buffer {
             // Add size of record plus the comma delimiter
             size += entry.bytes.length + 1;
             availableBytes -= entry.bytes.length;
-            Map map;
+            entries.add(entry);
+        }
+
+        return entries;
+    }
+
+    // Static stuff. Class for wrapping a Map in an Entry, and method
+    // for serializing a list of entries. Since these don't access
+    // queue or availableBytes, they don't need to be synchronized.
+
+    private static class Entry {
+        byte[] bytes;
+        private long entryTime;
+
+        private Entry(Map map) {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
+            writer.write(map);
+
+            bytes = baos.toByteArray();
+            entryTime = System.currentTimeMillis();
+
+            if (bytes.length > MAX_BATCH_SIZE_BYTES - 2) {
+                throw new IllegalArgumentException(
+                    "Can't accept a record larger than " + (MAX_BATCH_SIZE_BYTES - 2)
+                    + " bytes");
+            }
+        }
+    }
+
+    private static String serializeEntries(List<Entry> entries) throws UnsupportedEncodingException {
+        if (entries == null) {
+            return null;
+        }
+
+        ArrayList<Map> messages = new ArrayList<Map>();
+
+        for (Entry entry : entries) {
             ByteArrayInputStream bais = new ByteArrayInputStream(entry.bytes);
             Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
             messages.add((Map)reader.read());
@@ -78,6 +100,14 @@ public class Buffer {
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
         writer.write(messages);
         return baos.toString("UTF-8");
+    }
+
+    public void putMessage(Map map) {
+        putEntry(new Entry(map));
+    }
+
+    public String takeBatch(int batchSizeBytes, int batchDelayMillis) throws IOException {
+        return serializeEntries(takeEntries(batchSizeBytes, batchDelayMillis));
     }
 
 }
