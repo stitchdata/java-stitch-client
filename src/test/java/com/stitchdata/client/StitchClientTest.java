@@ -14,6 +14,17 @@ import com.cognitect.transit.Reader;
 import org.junit.*;
 import static org.junit.Assert.*;
 
+/**
+ * Attempts to exercise concurrent calls to {@link
+ * StitchClient#push(StitchMessage)}. Starts four threads that each
+ * send 10,000 records to a {@link DummyStitchClient}, which just
+ * counts the number of records received from each thread. Then we
+ * assert that the correct number of records were seen. This does not
+ * attempt to guarantee that calls to {@link
+ * StitchClient#push(StitchMessage)} are interleaved, but there are
+ * some debug print statements that we have used to show that batches
+ * at least contain records from multiple threads.
+ */
 public class StitchClientTest  {
 
     private static final int NUM_THREADS = 4;
@@ -21,10 +32,17 @@ public class StitchClientTest  {
 
     List<AtomicInteger> numRecordsByThreadId = new ArrayList<AtomicInteger>();
 
+    /**
+     * Overrides StitchClient for test purposes. Uses a blank URL and
+     * null values for most of the properties. Overrides sendBatch so
+     * that it expects records that have a "threadId" field, and
+     * updates numRecordsByThreadId to reflect the number of records
+     * seen with that threadId.
+     */
     private class DummyStitchClient extends StitchClient {
 
         DummyStitchClient() {
-            super(PUSH_URL, 0, null, null, null, Arrays.asList(new String[] { "id" }), StitchClientBuilder.DEFAULT_BATCH_SIZE_BYTES, 60000000);
+            super("", 0, null, null, null, Arrays.asList(new String[] { "id" }), StitchClientBuilder.DEFAULT_BATCH_SIZE_BYTES, 60000000);
         }
 
         @Override
@@ -60,6 +78,9 @@ public class StitchClientTest  {
         }
     }
 
+    /**
+     * Runnable that sends 10,000 records into a StitchClient.
+     */
     public static class Sender implements Runnable {
         private Map record = new HashMap();
         private final int threadId;
@@ -92,18 +113,18 @@ public class StitchClientTest  {
     @Test
     public void testConcurrentPushes() throws IOException {
 
-        List<Thread> threads = new ArrayList<Thread>();
-        final ArrayList<Map> records = new ArrayList<Map>();
-
         try (StitchClient stitch = new DummyStitchClient()) {
+
+            // Initialize and start all the threads
+            List<Thread> threads = new ArrayList<Thread>();
             for (int i = 0; i < NUM_THREADS; i++) {
                 threads.add(new Thread(new Sender(stitch, i)));
             }
-
             for (Thread thread : threads) {
                 thread.start();
             }
 
+            // Wait until the threads are done sending
             for (Thread thread : threads) {
                 try {
                     thread.join();
@@ -112,6 +133,7 @@ public class StitchClientTest  {
                 }
             }
 
+            // Each thread should have sent the correct number of records
             for (int i = 0; i < NUM_THREADS; i++) {
                 assertEquals(NUM_RECORDS_PER_THREAD, numRecordsByThreadId.get(i).get());
             }
