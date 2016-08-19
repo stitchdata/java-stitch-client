@@ -8,6 +8,7 @@ import java.util.LinkedList;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
+import java.io.IOException;
 import com.cognitect.transit.Writer;
 import com.cognitect.transit.TransitFactory;
 import com.cognitect.transit.Reader;

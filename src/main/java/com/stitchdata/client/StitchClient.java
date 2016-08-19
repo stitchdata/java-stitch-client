@@ -179,7 +179,7 @@ public class StitchClient implements Flushable, Closeable {
         }
     }
 
-    private void sendBatch(String batch) throws IOException {
+    void sendBatch(String batch) throws IOException {
         Request request = Request.Post(stitchUrl)
             .connectTimeout(connectTimeout)
             .addHeader("Authorization", "Bearer " + token)
