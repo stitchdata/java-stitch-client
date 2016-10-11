@@ -1,7 +1,9 @@
 package com.stitchdata.client;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.*;
@@ -35,42 +37,52 @@ public class BufferTest  {
         buffer = new Buffer();
     }
 
+    public void putMessage(Map record) {
+        buffer.put(new Buffer.Entry(record, null));
+    }
+
+    public String takeBatchBody(int batchSizeBytes, int batchDelayMillis)
+        throws UnsupportedEncodingException {
+        List<Buffer.Entry> entries = buffer.take(batchSizeBytes, batchDelayMillis);
+        return entries == null ? null : StitchClient.serializeEntries(entries);
+    }
+
     @Test
     public void testSingleRecordAvailableImmediately() throws IOException {
-        buffer.putMessage(tinyRecord);
-        assertEquals("[" + tinyResult + "]", buffer.takeBatch(0, 0));
+        putMessage(tinyRecord);
+        assertEquals("[" + tinyResult + "]", takeBatchBody(0, 0));
     }
 
     @Test
     public void testWithholdUntilBytesAvailable() throws IOException {
-        buffer.putMessage(tinyRecord);
-        assertNull(buffer.takeBatch(36, Integer.MAX_VALUE));
-        buffer.putMessage(tinyRecord);
-        assertNull(buffer.takeBatch(36, Integer.MAX_VALUE));
-        buffer.putMessage(tinyRecord);
+        putMessage(tinyRecord);
+        assertNull(takeBatchBody(36, Integer.MAX_VALUE));
+        putMessage(tinyRecord);
+        assertNull(takeBatchBody(36, Integer.MAX_VALUE));
+        putMessage(tinyRecord);
         assertEquals(
             "[" + tinyResult + "," + tinyResult + "," + tinyResult + "]",
-            buffer.takeBatch(36, Integer.MAX_VALUE));
+            takeBatchBody(36, Integer.MAX_VALUE));
     }
 
     @Test
     public void testBufferEmptyAfterBatch() throws IOException {
-        buffer.putMessage(tinyRecord);
-        buffer.putMessage(tinyRecord);
-        buffer.putMessage(tinyRecord);
-        assertNotNull(buffer.takeBatch(36, Integer.MAX_VALUE));
-        assertNull(buffer.takeBatch(36, Integer.MAX_VALUE));
+        putMessage(tinyRecord);
+        putMessage(tinyRecord);
+        putMessage(tinyRecord);
+        assertNotNull(takeBatchBody(36, Integer.MAX_VALUE));
+        assertNull(takeBatchBody(36, Integer.MAX_VALUE));
     }
 
     @Test
     public void testDoesNotExceedMaxBatchSize() throws IOException {
-        buffer.putMessage(bigRecord);
-        buffer.putMessage(bigRecord);
-        buffer.putMessage(bigRecord);
+        putMessage(bigRecord);
+        putMessage(bigRecord);
+        putMessage(bigRecord);
 
-        String batch1 = buffer.takeBatch(0, 0);
-        String batch2 = buffer.takeBatch(0, 0);
-        String batch3 = buffer.takeBatch(0, 0);
+        String batch1 = takeBatchBody(0, 0);
+        String batch2 = takeBatchBody(0, 0);
+        String batch3 = takeBatchBody(0, 0);
 
         System.out.println("Batch1 size is " + batch1.length());
 
@@ -81,17 +93,17 @@ public class BufferTest  {
 
     @Test(expected=IllegalArgumentException.class)
     public void assertCantPutRecordLargerThanMaxMessageSize() {
-        buffer.putMessage(hugeRecord);
+        putMessage(hugeRecord);
     }
 
     @Test
     public void testTriggerBatchAt10kMessages() throws IOException {
         for (int i = 0; i < 9999; i++) {
-            buffer.putMessage(tinyRecord);
+            putMessage(tinyRecord);
         }
-        assertNull(buffer.takeBatch(Buffer.MAX_BATCH_SIZE_BYTES, 60000));
-        buffer.putMessage(tinyRecord);
-        assertNotNull(buffer.takeBatch(Buffer.MAX_BATCH_SIZE_BYTES, 60000));
+        assertNull(takeBatchBody(Buffer.MAX_BATCH_SIZE_BYTES, 60000));
+        putMessage(tinyRecord);
+        assertNotNull(takeBatchBody(Buffer.MAX_BATCH_SIZE_BYTES, 60000));
     }
 
 }

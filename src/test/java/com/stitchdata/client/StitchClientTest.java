@@ -42,13 +42,13 @@ public class StitchClientTest  {
     private class DummyStitchClient extends StitchClient {
 
         DummyStitchClient() {
-            super("", 0, null, null, null, Arrays.asList(new String[] { "id" }), StitchClientBuilder.DEFAULT_BATCH_SIZE_BYTES, 60000000);
+            super("", 0, null, null, null, Arrays.asList(new String[] { "id" }), StitchClientBuilder.DEFAULT_BATCH_SIZE_BYTES, 60000000, null);
         }
 
         @Override
-        void sendBatch(String batch) throws IOException {
+        StitchResponse sendToStitch(String body) throws IOException {
 
-            ByteArrayInputStream bais = new ByteArrayInputStream(batch.getBytes());
+            ByteArrayInputStream bais = new ByteArrayInputStream(body.getBytes());
             Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
             List records = reader.read();
             int counts[] = new int[NUM_THREADS];
@@ -61,6 +61,8 @@ public class StitchClientTest  {
                 counts[threadId]++;
                 numRecordsByThreadId.get(threadId).incrementAndGet();
             }
+
+            return new StitchResponse(200, "ok", null);
 
             // For debugging
             // System.err.print("Sent a batch of size " + batch.length() + "; counts are");

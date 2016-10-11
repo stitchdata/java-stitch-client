@@ -130,6 +130,7 @@ public class StitchClientBuilder {
     private List<String> keyNames;
     private int batchSizeBytes = DEFAULT_BATCH_SIZE_BYTES;
     private int batchDelayMillis = DEFAULT_BATCH_DELAY_MILLIS;
+    private FlushHandler flushHandler = null;
 
     /**
      * Specify your Stitch client id. This is a required setting.
@@ -250,6 +251,11 @@ public class StitchClientBuilder {
         return this;
     }
 
+    public StitchClientBuilder withFlushHandler(FlushHandler flushHandler) {
+        this.flushHandler = flushHandler;
+        return this;
+    }
+
     /**
      * Return a new StitchClient.
      *
@@ -260,6 +266,7 @@ public class StitchClientBuilder {
             StitchClient.PUSH_URL, clientId, token, namespace,
             tableName, keyNames,
             batchSizeBytes,
-            batchDelayMillis);
+            batchDelayMillis,
+            flushHandler);
     }
 }
