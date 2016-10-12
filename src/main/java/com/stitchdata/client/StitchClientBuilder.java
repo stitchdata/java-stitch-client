@@ -131,6 +131,7 @@ public class StitchClientBuilder {
     private int batchSizeBytes = DEFAULT_BATCH_SIZE_BYTES;
     private int batchDelayMillis = DEFAULT_BATCH_DELAY_MILLIS;
     private FlushHandler flushHandler = null;
+    private String pushUrl = StitchClient.PUSH_URL;
 
     /**
      * Specify your Stitch client id. This is a required setting.
@@ -257,13 +258,23 @@ public class StitchClientBuilder {
     }
 
     /**
+     * Set the URL to use when submitting records, to override the
+     * default Stitch URL. Note that this only makes sense for testing
+     * purposes.
+     */
+    public StitchClientBuilder withPushUrl(String pushUrl) {
+        this.pushUrl = pushUrl;
+        return this;
+    }
+
+    /**
      * Return a new StitchClient.
      *
      * @return a new StitchClient
      */
     public StitchClient build() {
         return new StitchClient(
-            StitchClient.PUSH_URL, clientId, token, namespace,
+            pushUrl, clientId, token, namespace,
             tableName, keyNames,
             batchSizeBytes,
             batchDelayMillis,
