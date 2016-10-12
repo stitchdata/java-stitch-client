@@ -17,6 +17,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import com.cognitect.transit.Writer;
+import com.cognitect.transit.WriteHandler;
 import com.cognitect.transit.TransitFactory;
 import com.cognitect.transit.Reader;
 import org.apache.http.client.fluent.Request;
@@ -130,7 +131,9 @@ public class StitchClientBuilder {
     private List<String> keyNames;
     private int batchSizeBytes = DEFAULT_BATCH_SIZE_BYTES;
     private int batchDelayMillis = DEFAULT_BATCH_DELAY_MILLIS;
-
+    private FlushHandler flushHandler = null;
+    private String pushUrl = StitchClient.PUSH_URL;
+    private Map<Class,WriteHandler<?,?>> writeHandlers = null;
     /**
      * Specify your Stitch client id. This is a required setting.
      *
@@ -250,6 +253,29 @@ public class StitchClientBuilder {
         return this;
     }
 
+    public StitchClientBuilder withFlushHandler(FlushHandler flushHandler) {
+        this.flushHandler = flushHandler;
+        return this;
+    }
+
+    /**
+     * Set the URL to use when submitting records, to override the
+     * default Stitch URL. Note that this only makes sense for testing
+     * purposes.
+     */
+    public StitchClientBuilder withPushUrl(String pushUrl) {
+        this.pushUrl = pushUrl;
+        return this;
+    }
+
+    /**
+     * Set an custom write handlers to be used during the transit encoding.
+     */
+    public StitchClientBuilder withWriteHandlers(Map<Class,WriteHandler<?,?>> writeHandlers) {
+        this.writeHandlers = writeHandlers;
+        return this;
+    }
+
     /**
      * Return a new StitchClient.
      *
@@ -257,9 +283,11 @@ public class StitchClientBuilder {
      */
     public StitchClient build() {
         return new StitchClient(
-            StitchClient.PUSH_URL, clientId, token, namespace,
+            pushUrl, clientId, token, namespace,
             tableName, keyNames,
             batchSizeBytes,
-            batchDelayMillis);
+            batchDelayMillis,
+            flushHandler,
+            writeHandlers);
     }
 }

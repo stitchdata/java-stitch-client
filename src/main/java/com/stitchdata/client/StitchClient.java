@@ -4,7 +4,12 @@ import java.io.Closeable;
 import java.io.EOFException;
 import java.io.Flushable;
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.UnsupportedEncodingException;
+
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 import org.apache.http.client.fluent.Request;
@@ -16,6 +21,10 @@ import org.apache.http.HttpResponse;
 import org.apache.http.HttpEntity;
 import javax.json.Json;
 import javax.json.JsonReader;
+import com.cognitect.transit.Writer;
+import com.cognitect.transit.WriteHandler;
+import com.cognitect.transit.TransitFactory;
+import com.cognitect.transit.Reader;
 
 /**
  * Client for Stitch.
@@ -100,6 +109,8 @@ public class StitchClient implements Flushable, Closeable {
     private long lastFlushTime = System.currentTimeMillis();
 
     private final Buffer buffer;
+    private final FlushHandler flushHandler;
+    private final Map<Class,WriteHandler<?,?>> writeHandlers;
 
     private static void putWithDefault(Map map, String key, Object value, Object defaultValue) {
         map.put(key, value != null ? value : defaultValue);
@@ -111,7 +122,10 @@ public class StitchClient implements Flushable, Closeable {
         }
     }
 
-    private Map messageToMap(StitchMessage message) {
+
+
+
+    private byte[] messageToBytes(StitchMessage message) {
         HashMap map = new HashMap();
 
         switch (message.getAction()) {
@@ -130,7 +144,10 @@ public class StitchClient implements Flushable, Closeable {
         putIfNotNull(map, "sequence", message.getSequence());
         putIfNotNull(map, "data", message.getData());
 
-        return map;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos, writeHandlers);
+        writer.write(map);
+        return baos.toByteArray();
     }
 
     StitchClient(
@@ -141,7 +158,9 @@ public class StitchClient implements Flushable, Closeable {
         String tableName,
         List<String> keyNames,
         int batchSizeBytes,
-        int batchDelayMillis)
+        int batchDelayMillis,
+        FlushHandler flushHandler,
+        Map<Class,WriteHandler<?,?>> writeHandlers)
     {
         this.stitchUrl = stitchUrl;
         this.clientId = clientId;
@@ -152,6 +171,8 @@ public class StitchClient implements Flushable, Closeable {
         this.batchSizeBytes = batchSizeBytes;
         this.batchDelayMillis = batchDelayMillis;
         this.buffer = new Buffer();
+        this.flushHandler = flushHandler;
+        this.writeHandlers = TransitFactory.writeHandlerMap(writeHandlers);
     }
 
     /**
@@ -172,29 +193,91 @@ public class StitchClient implements Flushable, Closeable {
      *                     Stitch
      */
     public void push(StitchMessage message) throws StitchException, IOException {
-        buffer.putMessage(messageToMap(message));
-        String batch = buffer.takeBatch(this.batchSizeBytes, this.batchDelayMillis);
+        push(message, message);
+    }
+
+    /**
+     * Send a message to Stitch.
+     *
+     * <p>Adds the message to the current batch, sending the batch if
+     * we have accumulated enough data. Callers that wish to be
+     * notified after a record has been accepted by the gate should
+     * register a FlushHandler when initializing the client, and then
+     * provide a callbackArg to this function. After every successful
+     * flush we'll call the FlushHandler for this client, passing in
+     * the list of callbackArgs that correspond to the records flushed
+     * n this batch.</p>
+     *
+     * <p>If you built the StitchClient with batching disabled (by
+     * setting batchSizeBytes to 0 with {@link
+     * StitchClientBuilder#withBatchSizeBytes}), the message will be
+     * sent immediately and this function will block until it is
+     * delivered.</p>
+     *
+     * @throws StitchException if Stitch rejected or was unable to
+     *                         process the message
+     * @throws IOException if there was an error communicating with
+     *                     Stitch
+     */
+    public void push(StitchMessage message, Object callbackArg) throws StitchException, IOException {
+        buffer.put(new Buffer.Entry(messageToBytes(message), callbackArg));
+        List<Buffer.Entry> batch = buffer.take(this.batchSizeBytes, this.batchDelayMillis);
         if (batch != null) {
             sendBatch(batch);
         }
     }
 
-    void sendBatch(String batch) throws IOException {
+
+    StitchResponse sendToStitch(String body) throws IOException {
         Request request = Request.Post(stitchUrl)
             .connectTimeout(connectTimeout)
             .addHeader("Authorization", "Bearer " + token)
-            .bodyString(batch, CONTENT_TYPE);
+            .bodyString(body, CONTENT_TYPE);
         HttpResponse response = request.execute().returnResponse();
         StatusLine statusLine = response.getStatusLine();
         HttpEntity entity = response.getEntity();
         JsonReader rdr = Json.createReader(entity.getContent());
-        StitchResponse stitchResponse = new StitchResponse(
-            statusLine.getStatusCode(),
-            statusLine.getReasonPhrase(),
-            rdr.readObject());
+        return new StitchResponse(statusLine.getStatusCode(),
+                                  statusLine.getReasonPhrase(),
+                                  rdr.readObject());
+    }
+
+    void sendBatch(List<Buffer.Entry> batch) throws IOException {
+
+        String body = serializeEntries(batch);
+
+        StitchResponse stitchResponse = sendToStitch(body);
+
         if (!stitchResponse.isOk()) {
             throw new StitchException(stitchResponse);
         }
+
+        if (flushHandler != null) {
+            ArrayList callbackArgs = new ArrayList();
+            for (Buffer.Entry entry : batch) {
+                callbackArgs.add(entry.callbackArg);
+            }
+            flushHandler.onFlush(callbackArgs);
+        }
+    }
+
+    static String serializeEntries(List<Buffer.Entry> entries) throws UnsupportedEncodingException {
+        if (entries == null) {
+            return null;
+        }
+
+        ArrayList<Map> messages = new ArrayList<Map>();
+
+        for (Buffer.Entry entry : entries) {
+            ByteArrayInputStream bais = new ByteArrayInputStream(entry.bytes);
+            Reader reader = TransitFactory.reader(TransitFactory.Format.JSON, bais);
+            messages.add((Map)reader.read());
+        }
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
+        writer.write(messages);
+        return baos.toString("UTF-8");
     }
 
     /**
@@ -207,7 +290,7 @@ public class StitchClient implements Flushable, Closeable {
      */
     public void flush() throws IOException {
         while (true) {
-            String batch = buffer.takeBatch(0, 0);
+            List<Buffer.Entry> batch = buffer.take(0, 0);
             if (batch == null) {
                 return;
             }
