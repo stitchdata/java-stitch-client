@@ -2,6 +2,11 @@ package com.stitchdata.client;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.io.ByteArrayOutputStream;
+import com.cognitect.transit.Writer;
+import com.cognitect.transit.WriteHandler;
+import com.cognitect.transit.TransitFactory;
+import com.cognitect.transit.Reader;
 import java.util.Arrays;
 import java.util.List;
 import java.util.HashMap;
@@ -38,7 +43,10 @@ public class BufferTest  {
     }
 
     public void putMessage(Map record) {
-        buffer.put(new Buffer.Entry(record, null));
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
+        writer.write(record);
+        buffer.put(new Buffer.Entry(baos.toByteArray(), null));
     }
 
     public String takeBatchBody(int batchSizeBytes, int batchDelayMillis)

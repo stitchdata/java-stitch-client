@@ -60,15 +60,13 @@ public class Buffer {
         Object callbackArg;
         private long entryTime;
 
-        Entry(Map map, Object callbackArg) {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos);
-            writer.write(map);
+        Entry(byte[] bytes, Object callbackArg) {
 
-            this.bytes = baos.toByteArray();
+            this.bytes = bytes;
             this.entryTime = System.currentTimeMillis();
             this.callbackArg = callbackArg;
 
+            // We need two extra bytes for the [ and ] wrapping the record.
             if (bytes.length > MAX_BATCH_SIZE_BYTES - 2) {
                 throw new IllegalArgumentException(
                     "Can't accept a record larger than " + (MAX_BATCH_SIZE_BYTES - 2)

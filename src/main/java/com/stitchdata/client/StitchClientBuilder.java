@@ -17,6 +17,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import com.cognitect.transit.Writer;
+import com.cognitect.transit.WriteHandler;
 import com.cognitect.transit.TransitFactory;
 import com.cognitect.transit.Reader;
 import org.apache.http.client.fluent.Request;
@@ -132,7 +133,7 @@ public class StitchClientBuilder {
     private int batchDelayMillis = DEFAULT_BATCH_DELAY_MILLIS;
     private FlushHandler flushHandler = null;
     private String pushUrl = StitchClient.PUSH_URL;
-
+    private Map<Class,WriteHandler<?,?>> writeHandlers = null;
     /**
      * Specify your Stitch client id. This is a required setting.
      *
@@ -268,6 +269,14 @@ public class StitchClientBuilder {
     }
 
     /**
+     * Set an custom write handlers to be used during the transit encoding.
+     */
+    public StitchClientBuilder withWriteHandlers(Map<Class,WriteHandler<?,?>> writeHandlers) {
+        this.writeHandlers = writeHandlers;
+        return this;
+    }
+
+    /**
      * Return a new StitchClient.
      *
      * @return a new StitchClient
@@ -278,6 +287,7 @@ public class StitchClientBuilder {
             tableName, keyNames,
             batchSizeBytes,
             batchDelayMillis,
-            flushHandler);
+            flushHandler,
+            writeHandlers);
     }
 }

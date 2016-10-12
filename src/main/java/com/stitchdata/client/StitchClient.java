@@ -22,6 +22,7 @@ import org.apache.http.HttpEntity;
 import javax.json.Json;
 import javax.json.JsonReader;
 import com.cognitect.transit.Writer;
+import com.cognitect.transit.WriteHandler;
 import com.cognitect.transit.TransitFactory;
 import com.cognitect.transit.Reader;
 
@@ -109,6 +110,7 @@ public class StitchClient implements Flushable, Closeable {
 
     private final Buffer buffer;
     private final FlushHandler flushHandler;
+    private final Map<Class,WriteHandler<?,?>> writeHandlers;
 
     private static void putWithDefault(Map map, String key, Object value, Object defaultValue) {
         map.put(key, value != null ? value : defaultValue);
@@ -120,7 +122,10 @@ public class StitchClient implements Flushable, Closeable {
         }
     }
 
-    private Map messageToMap(StitchMessage message) {
+
+
+
+    private byte[] messageToBytes(StitchMessage message) {
         HashMap map = new HashMap();
 
         switch (message.getAction()) {
@@ -139,7 +144,10 @@ public class StitchClient implements Flushable, Closeable {
         putIfNotNull(map, "sequence", message.getSequence());
         putIfNotNull(map, "data", message.getData());
 
-        return map;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos, writeHandlers);
+        writer.write(map);
+        return baos.toByteArray();
     }
 
     StitchClient(
@@ -151,7 +159,8 @@ public class StitchClient implements Flushable, Closeable {
         List<String> keyNames,
         int batchSizeBytes,
         int batchDelayMillis,
-        FlushHandler flushHandler)
+        FlushHandler flushHandler,
+        Map<Class,WriteHandler<?,?>> writeHandlers)
     {
         this.stitchUrl = stitchUrl;
         this.clientId = clientId;
@@ -163,6 +172,7 @@ public class StitchClient implements Flushable, Closeable {
         this.batchDelayMillis = batchDelayMillis;
         this.buffer = new Buffer();
         this.flushHandler = flushHandler;
+        this.writeHandlers = TransitFactory.writeHandlerMap(writeHandlers);
     }
 
     /**
@@ -209,7 +219,7 @@ public class StitchClient implements Flushable, Closeable {
      *                     Stitch
      */
     public void push(StitchMessage message, Object callbackArg) throws StitchException, IOException {
-        buffer.put(new Buffer.Entry(messageToMap(message), callbackArg));
+        buffer.put(new Buffer.Entry(messageToBytes(message), callbackArg));
         List<Buffer.Entry> batch = buffer.take(this.batchSizeBytes, this.batchDelayMillis);
         if (batch != null) {
             sendBatch(batch);

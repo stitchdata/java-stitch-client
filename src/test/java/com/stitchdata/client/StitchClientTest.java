@@ -43,7 +43,7 @@ public class StitchClientTest  {
     private class DummyStitchClient extends StitchClient {
 
         DummyStitchClient(FlushHandler flushHandler) {
-            super("", 0, null, null, null, Arrays.asList(new String[] { "id" }), StitchClientBuilder.DEFAULT_BATCH_SIZE_BYTES, 60000000, flushHandler);
+            super("", 0, null, null, null, Arrays.asList(new String[] { "id" }), StitchClientBuilder.DEFAULT_BATCH_SIZE_BYTES, 60000000, flushHandler, null);
         }
 
         @Override
