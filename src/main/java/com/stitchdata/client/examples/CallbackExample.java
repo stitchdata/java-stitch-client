@@ -49,7 +49,7 @@ public class CallbackExample {
              .withTableName("people")
              .withKeyNames("id")
              .withFlushHandler(new FlushHandler() {
-                     public void onFlush(List<Object> names) {
+                     public void onFlush(List names) {
                          for (Object name : names) {
                              System.out.println(name);
                          }

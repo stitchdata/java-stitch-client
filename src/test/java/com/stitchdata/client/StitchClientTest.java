@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.io.ByteArrayInputStream;
 import java.io.EOFException;
 import com.cognitect.transit.TransitFactory;
@@ -41,8 +42,8 @@ public class StitchClientTest  {
      */
     private class DummyStitchClient extends StitchClient {
 
-        DummyStitchClient() {
-            super("", 0, null, null, null, Arrays.asList(new String[] { "id" }), StitchClientBuilder.DEFAULT_BATCH_SIZE_BYTES, 60000000, null);
+        DummyStitchClient(FlushHandler flushHandler) {
+            super("", 0, null, null, null, Arrays.asList(new String[] { "id" }), StitchClientBuilder.DEFAULT_BATCH_SIZE_BYTES, 60000000, flushHandler);
         }
 
         @Override
@@ -87,10 +88,12 @@ public class StitchClientTest  {
         private Map record = new HashMap();
         private final int threadId;
         private final StitchClient stitch;
+        private final boolean useCallback;
 
-        public Sender(StitchClient stitch, int threadId) {
+        public Sender(StitchClient stitch, int threadId, boolean useCallback) {
             this.threadId = threadId;
             this.stitch = stitch;
+            this.useCallback = useCallback;
 
             char chars[] = new char[100];
             Arrays.fill(chars, 'b');
@@ -102,10 +105,17 @@ public class StitchClientTest  {
             for (int recordId = 0; recordId < NUM_RECORDS_PER_THREAD; recordId++) {
                 record.put("recordId", recordId);
                 try {
-                    stitch.push(StitchMessage.newUpsert()
-                                .withSequence(0)
-                                .withData(record));
-                } catch (IOException e) {
+                    StitchMessage message = StitchMessage.newUpsert()
+                        .withSequence(0)
+                        .withData(record);
+                    if (useCallback) {
+                        stitch.push(message, String.format("thread-%d-record-%d", threadId, recordId));
+                    }
+                    else {
+                        stitch.push(message);
+                    }
+                }
+                catch (IOException e) {
                     throw new RuntimeException(e);
                 }
             }
@@ -113,14 +123,14 @@ public class StitchClientTest  {
     }
 
     @Test
-    public void testConcurrentPushes() throws IOException {
+    public void testConcurrentPushesWithoutCallback() throws IOException {
 
-        try (StitchClient stitch = new DummyStitchClient()) {
+        try (StitchClient stitch = new DummyStitchClient(null)) {
 
             // Initialize and start all the threads
             List<Thread> threads = new ArrayList<Thread>();
             for (int i = 0; i < NUM_THREADS; i++) {
-                threads.add(new Thread(new Sender(stitch, i)));
+                threads.add(new Thread(new Sender(stitch, i, false)));
             }
             for (Thread thread : threads) {
                 thread.start();
@@ -139,6 +149,47 @@ public class StitchClientTest  {
             for (int i = 0; i < NUM_THREADS; i++) {
                 assertEquals(NUM_RECORDS_PER_THREAD, numRecordsByThreadId.get(i).get());
             }
+        }
+    }
+
+    private static class SetFlushHandler implements FlushHandler {
+        final ConcurrentSkipListSet callbackArgsReceived =
+            new ConcurrentSkipListSet();
+        public void onFlush(List arg) {
+            callbackArgsReceived.addAll(arg);
+        }
+    }
+
+    @Test
+    public void testConcurrentPushesWithCallback() throws IOException {
+
+        SetFlushHandler flushHandler = new SetFlushHandler();
+        try (StitchClient stitch = new DummyStitchClient(flushHandler)) {
+
+            // Initialize and start all the threads
+            List<Thread> threads = new ArrayList<Thread>();
+            for (int i = 0; i < NUM_THREADS; i++) {
+                threads.add(new Thread(new Sender(stitch, i, true)));
+            }
+            for (Thread thread : threads) {
+                thread.start();
+            }
+
+            // Wait until the threads are done sending
+            for (Thread thread : threads) {
+                try {
+                    thread.join();
+                } catch (InterruptedException e) {
+                    // Do nothing
+                }
+            }
+
+            // Each thread should have sent the correct number of records
+            for (int i = 0; i < NUM_THREADS; i++) {
+                assertEquals(NUM_RECORDS_PER_THREAD, numRecordsByThreadId.get(i).get());
+            }
+
+            assertEquals(NUM_THREADS * NUM_RECORDS_PER_THREAD, flushHandler.callbackArgsReceived.size());
         }
     }
 }
