@@ -202,7 +202,8 @@ public class StitchClient implements Flushable, Closeable {
      * <p>Adds the message to the current batch, sending the batch if
      * we have accumulated enough data. Callers that wish to be
      * notified after a record has been accepted by the gate should
-     * initialize may pass in a callbackArg. After every successful
+     * register a FlushHandler when initializing the client, and then
+     * provide a callbackArg to this function. After every successful
      * flush we'll call the FlushHandler for this client, passing in
      * the list of callbackArgs that correspond to the records flushed
      * n this batch.</p>
