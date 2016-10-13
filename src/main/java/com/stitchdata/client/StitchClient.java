@@ -123,14 +123,18 @@ public class StitchClient implements Flushable, Closeable {
     }
 
 
-
-
-    private byte[] messageToBytes(StitchMessage message) {
+    public byte[] messageToBytes(StitchMessage message) {
         HashMap map = new HashMap();
 
         switch (message.getAction()) {
-        case UPSERT: map.put("action", "upsert"); break;
-        case SWITCH_VIEW: map.put("action", "switch_view"); break;
+        case UPSERT:
+            map.put("action", "upsert");
+            putWithDefault(map, "key_names", message.getKeyNames(), keyNames);
+            putIfNotNull(map, "data", message.getData());
+            break;
+        case SWITCH_VIEW:
+            map.put("action", "switch_view");
+            break;
         default: throw new IllegalArgumentException("Action must not be null");
         }
 
@@ -138,11 +142,8 @@ public class StitchClient implements Flushable, Closeable {
         map.put("namespace", namespace);
 
         putWithDefault(map, "table_name", message.getTableName(), tableName);
-        putWithDefault(map, "key_names", message.getKeyNames(), keyNames);
-
         putIfNotNull(map, "table_version", message.getTableVersion());
         putIfNotNull(map, "sequence", message.getSequence());
-        putIfNotNull(map, "data", message.getData());
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         Writer writer = TransitFactory.writer(TransitFactory.Format.JSON, baos, writeHandlers);
