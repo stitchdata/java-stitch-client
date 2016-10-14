@@ -123,7 +123,7 @@ public class StitchClient implements Flushable, Closeable {
     }
 
 
-    public byte[] messageToBytes(StitchMessage message) {
+    private byte[] messageToBytes(StitchMessage message) {
         HashMap map = new HashMap();
 
         switch (message.getAction()) {
