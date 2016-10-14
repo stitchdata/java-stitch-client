@@ -180,7 +180,6 @@ like the following in your `~/.m2/settings.xml` file.
       <properties>
         <gpg.executable>gpg2</gpg.executable>
         <gpg.keyname>Your GPG keyname</gpg.keyname>
-        <gpg.passphrase>The passphrase for your GPG key</gpg.passphrase>
       </properties>
     </profile>
   </profiles>
@@ -190,11 +189,6 @@ like the following in your `~/.m2/settings.xml` file.
  <servers>
     <server>
       <id>ossrh</id>
-      <username>user</username>
-      <password>pass</password>
-    </server>
-    <server>
-      <id>nexus</id>
       <username>user</username>
       <password>pass</password>
     </server>
@@ -216,10 +210,11 @@ version number specified in `pom.xml` is `major.minor.patch-SNAPSHOT`.
 2. Before releasing, you should make sure that you're on the master
   branch and that your git repository is clean and up-to-date with
   Github.
-3. [optional] Run `mvn release:clean` to get rid of any artifacts that
+3. Make sure gpg-agent is running.
+4. [optional] Run `mvn release:clean` to get rid of any artifacts that
   are leftover from a previous release.
-4. Run `mvn release:prepare` and hit Enter through the prompts it gives you.
-5. Run `mvn release:perform`.
+5. Run `mvn release:prepare` and hit Enter through the prompts it gives you.
+6. Run `mvn release:perform`.
 
 License
 -------
