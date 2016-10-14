@@ -165,6 +165,62 @@ records from multiple threads to be sent on the same batch, or if you
 want to ensure that a record is only delivered by the thread that
 produced it, then you can create a separate StitchClient for each thread.
 
+Developers
+----------
+
+In order to deploy snapshots or release artifacts you'll need GPG keys
+and a login for the Sonatype servers. You'll want to put something
+like the following in your `~/.m2/settings.xml` file.
+
+```xml
+<settings>
+  <profiles>
+    <profile>
+      <id>gpg</id>
+      <properties>
+        <gpg.executable>gpg2</gpg.executable>
+        <gpg.keyname>Your GPG keyname</gpg.keyname>
+        <gpg.passphrase>The passphrase for your GPG key</gpg.passphrase>
+      </properties>
+    </profile>
+  </profiles>
+  <activeProfiles>
+    <activeProfile>gpg</activeProfile>
+  </activeProfiles>
+ <servers>
+    <server>
+      <id>ossrh</id>
+      <username>user</username>
+      <password>pass</password>
+    </server>
+    <server>
+      <id>nexus</id>
+      <username>user</username>
+      <password>pass</password>
+    </server>
+  </servers>
+</settings>
+
+Note that in order to sign jars you'll need to set the `gpg.keyname`
+if you have multiple keys in your keyring, and you'll need to set
+`gpg.passphrase`. In order to deploy to the Sonatype's maven
+repository you'll need to enter your credentials under the "servers"
+section.
+
+```
+
+### Releasing
+
+1. Decide what version you want to release and make sure that the
+version number specified in `pom.xml` is `major.minor.patch-SNAPSHOT`.
+2. Before releasing, you should make sure that you're on the master
+  branch and that your git repository is clean and up-to-date with
+  Github.
+3. [optional] Run `mvn release:clean` to get rid of any artifacts that
+  are leftover from a previous release.
+4. Run `mvn release:prepare` and hit Enter through the prompts it gives you.
+5. Run `mvn release:perform`.
+
 License
 -------
 
