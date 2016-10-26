@@ -144,12 +144,13 @@ public class StitchClientTest  {
                     // Do nothing
                 }
             }
-
-            // Each thread should have sent the correct number of records
-            for (int i = 0; i < NUM_THREADS; i++) {
-                assertEquals(NUM_RECORDS_PER_THREAD, numRecordsByThreadId.get(i).get());
-            }
         }
+
+        // Each thread should have sent the correct number of records
+        for (int i = 0; i < NUM_THREADS; i++) {
+            assertEquals(NUM_RECORDS_PER_THREAD, numRecordsByThreadId.get(i).get());
+        }
+
     }
 
     private static class SetFlushHandler implements FlushHandler {
@@ -183,13 +184,12 @@ public class StitchClientTest  {
                     // Do nothing
                 }
             }
-
-            // Each thread should have sent the correct number of records
-            for (int i = 0; i < NUM_THREADS; i++) {
-                assertEquals(NUM_RECORDS_PER_THREAD, numRecordsByThreadId.get(i).get());
-            }
-
-            assertEquals(NUM_THREADS * NUM_RECORDS_PER_THREAD, flushHandler.callbackArgsReceived.size());
         }
+        // Each thread should have sent the correct number of records
+        for (int i = 0; i < NUM_THREADS; i++) {
+            assertEquals(NUM_RECORDS_PER_THREAD, numRecordsByThreadId.get(i).get());
+        }
+
+        assertEquals(NUM_THREADS * NUM_RECORDS_PER_THREAD, flushHandler.callbackArgsReceived.size());
     }
 }
