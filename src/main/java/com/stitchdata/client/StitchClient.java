@@ -87,7 +87,7 @@ public class StitchClient implements Flushable, Closeable {
 
     // HTTP constants
     public static final String PUSH_URL
-        = "https://pipeline-gateway.rjmetrics.com/push";
+        = "https://api.stitchdata.com/v2/import/push";
     private static final int HTTP_CONNECT_TIMEOUT = 1000 * 60 * 2;
     private static final ContentType CONTENT_TYPE =
         ContentType.create("application/transit+json");
