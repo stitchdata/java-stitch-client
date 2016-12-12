@@ -4,7 +4,7 @@
   <groupId>com.stitchdata</groupId>
   <artifactId>java-stitch-client</artifactId>
   <description>Java Stitch Client</description>
-  <version>0.4.13-SNAPSHOT</version>
+  <version>0.5.0-SNAPSHOT</version>
   <url>https://github.com/stitchdata/java-stitch-client</url>
   <scm>
     <url>https://github.com/stitchdata/java-stitch-client</url>
