@@ -189,6 +189,7 @@ public class StitchClient implements Flushable, Closeable {
      * sent immediately and this function will block until it is
      * delivered.</p>
      *
+     * @param message the message
      * @throws StitchException if Stitch rejected or was unable to
      *                         process the message
      * @throws IOException if there was an error communicating with
@@ -216,6 +217,9 @@ public class StitchClient implements Flushable, Closeable {
      * sent immediately and this function will block until it is
      * delivered.</p>
      *
+     * @param message the message
+     * @param callbackArg flush handler will be invoked with this as 
+     *                    one of the callbackArgs.
      * @throws StitchException if Stitch rejected or was unable to
      *                         process the message
      * @throws IOException if there was an error communicating with

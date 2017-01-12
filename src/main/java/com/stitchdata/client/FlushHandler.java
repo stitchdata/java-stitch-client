@@ -11,6 +11,9 @@ public interface FlushHandler {
     /**
      * Called after a successful flush, with the list of callbackArgs
      * corresponding to the records that were flushed.
+     *
+     * @param callbackArgs the callbackArgs associated with the records
+     *                     that were flushed.
      */
     public void onFlush(List callbackArgs);
 }
