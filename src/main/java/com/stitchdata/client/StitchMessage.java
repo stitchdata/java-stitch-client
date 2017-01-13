@@ -44,6 +44,9 @@ public class StitchMessage {
 
     /**
      * Set the action and return this message.
+     *
+     * @param action the action
+     * @return this object
      */
     public StitchMessage withAction(Action action) {
         this.action = action;
@@ -154,6 +157,9 @@ public class StitchMessage {
      * Regardless of the order in which the records are processed by
      * the loader, the end result will be that "status" for order
      * number 123 will be "completed".
+     *
+     * @param sequence sequence number
+     * @return this object
      */
     public StitchMessage withSequence(long sequence) {
         this.sequence = sequence;
@@ -166,6 +172,9 @@ public class StitchMessage {
      * modify the map until after the message is pushed via {@link
      * StitchClient#push(StitchMessage)}. After that point, it is safe to
      * modify and reuse the map.
+     *
+     * @param data body of the message
+     * @return this object
      */
     public StitchMessage withData(Map data) {
         this.data = data;

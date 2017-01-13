@@ -263,7 +263,7 @@ public class StitchClientBuilder {
      * default Stitch URL. Note that this only makes sense for testing
      * purposes.
      *
-     * @param the url to use
+     * @param pushUrl the url to use
      * @return this object
      */
     public StitchClientBuilder withPushUrl(String pushUrl) {
