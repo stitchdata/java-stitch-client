@@ -253,7 +253,6 @@ public class StitchClient implements Flushable, Closeable {
             JsonReader rdr = Json.createReader(response.getEntity().getContent());
             content = rdr.readObject();
         }
-
         return new StitchResponse(statusCode, reasonPhrase, content);
     }
 
