@@ -20,6 +20,7 @@ import org.apache.http.StatusLine;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpEntity;
 import javax.json.Json;
+import javax.json.JsonObject;
 import javax.json.JsonReader;
 import com.cognitect.transit.Writer;
 import com.cognitect.transit.WriteHandler;
@@ -188,6 +189,7 @@ public class StitchClient implements Flushable, Closeable {
      * sent immediately and this function will block until it is
      * delivered.</p>
      *
+     * @param message the message
      * @throws StitchException if Stitch rejected or was unable to
      *                         process the message
      * @throws IOException if there was an error communicating with
@@ -215,6 +217,9 @@ public class StitchClient implements Flushable, Closeable {
      * sent immediately and this function will block until it is
      * delivered.</p>
      *
+     * @param message the message
+     * @param callbackArg flush handler will be invoked with this as 
+     *                    one of the callbackArgs.
      * @throws StitchException if Stitch rejected or was unable to
      *                         process the message
      * @throws IOException if there was an error communicating with
@@ -228,19 +233,27 @@ public class StitchClient implements Flushable, Closeable {
         }
     }
 
-
     StitchResponse sendToStitch(String body) throws IOException {
         Request request = Request.Post(stitchUrl)
             .connectTimeout(connectTimeout)
             .addHeader("Authorization", "Bearer " + token)
             .bodyString(body, CONTENT_TYPE);
+
         HttpResponse response = request.execute().returnResponse();
-        StatusLine statusLine = response.getStatusLine();
-        HttpEntity entity = response.getEntity();
-        JsonReader rdr = Json.createReader(entity.getContent());
-        return new StitchResponse(statusLine.getStatusCode(),
-                                  statusLine.getReasonPhrase(),
-                                  rdr.readObject());
+        int statusCode = response.getStatusLine().getStatusCode();
+        String reasonPhrase = response.getStatusLine().getReasonPhrase();
+        ContentType contentType = ContentType.get(response.getEntity());
+        JsonObject content = null;
+
+        // Don't attempt to parse body for 5xx responses or if the
+        // Content-Type doesn't explicitly state application/json.
+        if (statusCode < 500 &&
+            contentType != null &&
+            ContentType.APPLICATION_JSON.getMimeType().equals(contentType.getMimeType())) {
+            JsonReader rdr = Json.createReader(response.getEntity().getContent());
+            content = rdr.readObject();
+        }
+        return new StitchResponse(statusCode, reasonPhrase, content);
     }
 
     void sendBatch(List<Buffer.Entry> batch) throws IOException {

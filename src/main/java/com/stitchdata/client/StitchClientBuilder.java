@@ -87,7 +87,7 @@ import javax.json.JsonReader;
  * StitchClientBuilder#withBatchSizeBytes(int)} and {@link
  * StitchClientBuilder#withBatchDelayMillis(int)}. Setting
  * batchSizeBytes to 0 will effectively disable batching and cause
- * each call to {@link StitchClient.#push(StitchMessage)} to send the
+ * each call to {@link StitchClient#push(StitchMessage)} to send the
  * record immediatley.
  *
  * <pre>
@@ -262,6 +262,9 @@ public class StitchClientBuilder {
      * Set the URL to use when submitting records, to override the
      * default Stitch URL. Note that this only makes sense for testing
      * purposes.
+     *
+     * @param pushUrl the url to use
+     * @return this object
      */
     public StitchClientBuilder withPushUrl(String pushUrl) {
         this.pushUrl = pushUrl;
@@ -269,7 +272,10 @@ public class StitchClientBuilder {
     }
 
     /**
-     * Set an custom write handlers to be used during the transit encoding.
+     * Set custom write handlers to be used during the transit encoding.
+     *
+     * @param writeHandlers the write handlers
+     * @return this object
      */
     public StitchClientBuilder withWriteHandlers(Map<Class,WriteHandler<?,?>> writeHandlers) {
         this.writeHandlers = writeHandlers;
