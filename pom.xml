@@ -4,12 +4,12 @@
   <groupId>com.stitchdata</groupId>
   <artifactId>java-stitch-client</artifactId>
   <description>Java Stitch Client</description>
-  <version>0.5.5-SNAPSHOT</version>
+  <version>0.5.5</version>
   <url>https://github.com/stitchdata/java-stitch-client</url>
   <scm>
     <url>https://github.com/stitchdata/java-stitch-client</url>
     <connection>scm:git:git@github.com:stitchdata/java-stitch-client.git</connection>
-    <tag>\</tag>
+    <tag>java-stitch-client-0.5.5</tag>
   </scm>
   <developers>
     <developer>
