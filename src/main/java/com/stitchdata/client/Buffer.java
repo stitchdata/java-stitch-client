@@ -70,7 +70,7 @@ public class Buffer {
             if (bytes.length > MAX_BATCH_SIZE_BYTES - 2) {
                 throw new IllegalArgumentException(
                     "Can't accept a record larger than " + (MAX_BATCH_SIZE_BYTES - 2)
-                    + " bytes");
+                    + " bytes (is " + bytes.length + "bytes)");
             }
         }
     }
