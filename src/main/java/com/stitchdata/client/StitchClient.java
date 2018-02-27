@@ -14,11 +14,15 @@ import java.util.Map;
 import java.util.HashMap;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.client.fluent.Response;
+import org.apache.http.client.fluent.Executor;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.entity.ContentType;
 import org.apache.http.StatusLine;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpEntity;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
@@ -233,13 +237,30 @@ public class StitchClient implements Flushable, Closeable {
         }
     }
 
+    private HttpResponse makeRequest(Request req) {
+        if (System.getenv("STITCH_VERIFY_SSL").equals("false")) {
+            CloseableHttpClient httpClient = HttpClients.custom()
+                .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                .build();
+            Executor ex = Executor.newInstance(httpClient);
+            Response response =  ex.execute(req);
+            httpClient.close();
+            return response.returnResponse();
+        }
+        else {
+            return req.execute().returnResponse();
+        }
+
+    }
+    
     StitchResponse sendToStitch(String body) throws IOException {
         Request request = Request.Post(stitchUrl)
             .connectTimeout(connectTimeout)
             .addHeader("Authorization", "Bearer " + token)
             .bodyString(body, CONTENT_TYPE);
 
-        HttpResponse response = request.execute().returnResponse();
+        
+        HttpResponse response = makeRequest(request);
         int statusCode = response.getStatusLine().getStatusCode();
         String reasonPhrase = response.getStatusLine().getReasonPhrase();
         ContentType contentType = ContentType.get(response.getEntity());
